@@ -1003,13 +1003,13 @@ function setRngMode(value) {
         }
 
         if (activePage === "screen") {
-          setTimeout(() => loadoutScreenPage?.scrollIntoView({ behavior: "smooth", block: "start" }), 40);
+          /* auto-scroll disabled */
         } else if (activePage === "thumbnail") {
-          setTimeout(() => thumbnailBuilderPage?.scrollIntoView({ behavior: "smooth", block: "start" }), 40);
+          /* auto-scroll disabled */
         } else if (activePage === "tier") {
-          setTimeout(() => tierListPage?.scrollIntoView({ behavior: "smooth", block: "start" }), 40);
+          /* auto-scroll disabled */
         } else if (activePage === "home") {
-          setTimeout(() => homePage?.scrollIntoView({ behavior: "smooth", block: "start" }), 40);
+          /* auto-scroll disabled */
         } else {
           statusText.textContent = rngMode ? "RNG SPINS READY" : "LOADOUT READY";
         }
@@ -1366,6 +1366,16 @@ const exactAssetFileMap = {"10bvisits":["Skins2/10BVisits_Icon.png"],"10bvisitsi
       let pageCooldownTimer = null;
       let pageCooldownHideTimer = null;
 
+      const getLastPageSwitch = () => {
+        try { return Number(localStorage.getItem(PAGE_SWITCH_KEY) || 0); }
+        catch (err) { return 0; }
+      };
+
+      const markPageSwitchCooldown = () => {
+        try { localStorage.setItem(PAGE_SWITCH_KEY, String(Date.now())); }
+        catch (err) {}
+      };
+
       const ensurePageCooldownToast = () => {
         let toast = document.getElementById("pageSwitchCooldownToast");
         if (toast) return toast;
@@ -1429,7 +1439,7 @@ const exactAssetFileMap = {"10bvisits":["Skins2/10BVisits_Icon.png"],"10bvisitsi
         if (current === destinationPath) return;
 
         const now = Date.now();
-        const lastSwitch = Number(localStorage.getItem(PAGE_SWITCH_KEY) || 0);
+        const lastSwitch = getLastPageSwitch();
         const elapsed = now - lastSwitch;
         const left = PAGE_SWITCH_COOLDOWN_MS - elapsed;
 
@@ -1438,9 +1448,13 @@ const exactAssetFileMap = {"10bvisits":["Skins2/10BVisits_Icon.png"],"10bvisitsi
           return;
         }
 
-        localStorage.setItem(PAGE_SWITCH_KEY, String(now));
+        markPageSwitchCooldown();
         window.location.href = destination;
       };
+
+      if (window.__RIVALS_TOOLS_PAGE__ && window.__RIVALS_TOOLS_PAGE__ !== "home") {
+        markPageSwitchCooldown();
+      }
 
       pageTabs?.addEventListener("click", event => {
         const btn = event.target.closest(".page-tab");
