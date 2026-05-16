@@ -27,6 +27,7 @@
         <button class="page-tab" type="button" data-page="thumbnail">Thumbnail Builder</button>
         <button class="page-tab" type="button" data-page="tier">Tier List Builder</button>
         <button class="page-tab" type="button" data-page="challenge">Challenge Road</button>
+        <button class="page-tab" type="button" data-page="fusion">Weapon Fusions</button>
       </div>
               </div>
 
@@ -70,6 +71,13 @@
               <img decoding="async" loading="lazy" src="../assets/embedded/img_0009_9330fd839a2f.svg" alt="Challenge Road preview" draggable="false" />
             </span>
             <span class="home-card-title">Challenge Road</span>
+          </button>
+
+          <button class="home-tool-card" type="button" data-home-page="fusion">
+            <span class="home-card-image-wrap">
+              <img decoding="async" loading="lazy" src="../assets/embedded/weapon_fusions_card.svg" alt="Weapon Fusions preview" draggable="false" />
+            </span>
+            <span class="home-card-title">Weapon Fusions</span>
           </button>
         </div>
         <section class="what-is-this">
@@ -130,6 +138,67 @@
 
 
       
+      
+      <section class="weapon-fusions-page" id="weaponFusionsPage" aria-label="Weapon Fusions">
+        <div class="fusion-copy">
+          <h2>Weapon Fusions</h2>
+          <p>Pick two Rivals weapons and fuse them into a new result. Some combinations are handcrafted, while others use weapon type and theme logic to create a fitting fusion.</p>
+        </div>
+
+        <div class="fusion-lab" id="fusionLab">
+          <div class="fusion-slot fusion-input-slot" data-fusion-slot="0">
+            <span class="fusion-slot-label">Weapon 1</span>
+            <button class="fusion-select-slot" id="fusionSlotA" type="button" aria-label="Choose first fusion weapon">
+              <span class="fusion-plus">+</span>
+              <img class="fusion-weapon-img" alt="" hidden draggable="false" />
+              <strong class="fusion-weapon-name">Choose Weapon</strong>
+            </button>
+          </div>
+
+          <div class="fusion-bar fusion-bar-left"></div>
+
+          <div class="fusion-result-wrap">
+            <button class="fusion-result-slot" id="fusionResultSlot" type="button" aria-label="Fusion result">
+              <span class="fusion-result-kicker">Fusion Result</span>
+              <img class="fusion-result-img" alt="" hidden draggable="false" />
+              <strong class="fusion-result-name">Select 2 weapons</strong>
+              <small class="fusion-result-recipe">Waiting for ingredients...</small>
+            </button>
+            <button class="tier-add-btn fusion-button" id="fusionFuseBtn" type="button">Fuse Weapons</button>
+            <button class="tier-add-btn secondary" id="fusionClearBtn" type="button">Clear Fusion</button>
+          </div>
+
+          <div class="fusion-bar fusion-bar-right"></div>
+
+          <div class="fusion-slot fusion-input-slot" data-fusion-slot="1">
+            <span class="fusion-slot-label">Weapon 2</span>
+            <button class="fusion-select-slot" id="fusionSlotB" type="button" aria-label="Choose second fusion weapon">
+              <span class="fusion-plus">+</span>
+              <img class="fusion-weapon-img" alt="" hidden draggable="false" />
+              <strong class="fusion-weapon-name">Choose Weapon</strong>
+            </button>
+          </div>
+        </div>
+
+        <div class="fusion-recipe-note" id="fusionRecipeNote">Tip: try combinations like Assault Rifle + Freeze Ray, Handgun + Spray, or Bow + Crossbow.</div>
+
+        <div class="screen-picker-backdrop fusion-picker-backdrop" id="fusionPickerModal" aria-hidden="true">
+          <div class="screen-picker-modal fusion-picker-modal" role="dialog" aria-modal="true" aria-labelledby="fusionPickerTitle">
+            <div class="screen-picker-head">
+              <div>
+                <h2 id="fusionPickerTitle">Choose a Weapon</h2>
+                <p>Pick the weapon you want to place into this fusion slot.</p>
+              </div>
+              <button class="screen-picker-close" id="fusionPickerClose" type="button" aria-label="Close fusion picker">×</button>
+            </div>
+            <div class="tier-picker-search-row">
+              <input class="tier-search" id="fusionPickerSearch" type="search" placeholder="Search weapons..." />
+            </div>
+            <div class="fusion-picker-grid" id="fusionPickerGrid"></div>
+          </div>
+        </div>
+      </section>
+
       <section class="challenge-road-page" id="challengeRoadPage" aria-label="Challenge Road Builder">
         <div class="challenge-copy">
           <h2>Challenge Road Builder</h2>

@@ -933,6 +933,8 @@ function setRngMode(value) {
       window.__kudaTierTitleSrc = tierTitleSrc;
       const challengeTitleSrc = __rtAsset("assets/embedded/img_0021_f00d9de86b4c.svg");
       window.__kudaChallengeTitleSrc = challengeTitleSrc;
+      const fusionTitleSrc = __rtAsset("assets/embedded/weapon_fusions_title.svg");
+      window.__kudaFusionTitleSrc = fusionTitleSrc;
       const tierListPage = document.getElementById("tierListPage");
       const loadoutScreenPage = document.getElementById("loadoutScreenPage");
       const screenStage = document.getElementById("screenStage");
@@ -983,7 +985,7 @@ function setRngMode(value) {
       let activePage = "home";
 
       const setActivePage = page => {
-        activePage = page === "screen" ? "screen" : page === "randomizer" ? "randomizer" : page === "thumbnail" ? "thumbnail" : page === "tier" ? "tier" : page === "challenge" ? "challenge" : "home";
+        activePage = page === "screen" ? "screen" : page === "randomizer" ? "randomizer" : page === "thumbnail" ? "thumbnail" : page === "tier" ? "tier" : page === "challenge" ? "challenge" : page === "fusion" ? "fusion" : "home";
         if (activePage !== "thumbnail") document.body.classList.remove('thumb2-template-active');
         else if (typeof currentThumbnailTemplate !== 'undefined') document.body.classList.toggle('thumb2-template-active', currentThumbnailTemplate === '2');
         document.body.classList.toggle("home-page", activePage === "home");
@@ -991,6 +993,7 @@ function setRngMode(value) {
         document.body.classList.toggle("thumbnail-page", activePage === "thumbnail");
         document.body.classList.toggle("tier-page", activePage === "tier");
         document.body.classList.toggle("challenge-page", activePage === "challenge");
+        document.body.classList.toggle("fusion-page", activePage === "fusion");
         pageTabs.querySelectorAll(".page-tab").forEach(btn => {
           const isActive = btn.dataset.page === activePage;
           btn.classList.toggle("active", isActive);
@@ -998,8 +1001,8 @@ function setRngMode(value) {
         });
 
         if (titleImage) {
-          titleImage.src = activePage === "screen" ? screenTitleSrc : activePage === "thumbnail" ? thumbnailTitleSrc : activePage === "tier" ? tierTitleSrc : activePage === "challenge" ? challengeTitleSrc : activePage === "home" ? homeTitleSrc : randomizerTitleSrc;
-          titleImage.alt = activePage === "screen" ? "Loadout Screen" : activePage === "thumbnail" ? "Thumbnail Builder" : activePage === "tier" ? "Tier List Builder" : activePage === "challenge" ? "Challenge Road Builder" : activePage === "home" ? "RivalsTools.net" : "Loadout Randomizer";
+          titleImage.src = activePage === "screen" ? screenTitleSrc : activePage === "thumbnail" ? thumbnailTitleSrc : activePage === "tier" ? tierTitleSrc : activePage === "challenge" ? challengeTitleSrc : activePage === "fusion" ? fusionTitleSrc : activePage === "home" ? homeTitleSrc : randomizerTitleSrc;
+          titleImage.alt = activePage === "screen" ? "Loadout Screen" : activePage === "thumbnail" ? "Thumbnail Builder" : activePage === "tier" ? "Tier List Builder" : activePage === "challenge" ? "Challenge Road Builder" : activePage === "fusion" ? "Weapon Fusions" : activePage === "home" ? "RivalsTools.net" : "Loadout Randomizer";
         }
 
         if (activePage === "screen") {
@@ -1430,7 +1433,8 @@ const exactAssetFileMap = {"10bvisits":["Skins2/10BVisits_Icon.png"],"10bvisitsi
           screen: __RT_BASE__ + "/loadout-screen/",
           thumbnail: __RT_BASE__ + "/thumbnail-builder/",
           tier: __RT_BASE__ + "/tier-list-builder/",
-          challenge: __RT_BASE__ + "/challenge-road/"
+          challenge: __RT_BASE__ + "/challenge-road/",
+          fusion: __RT_BASE__ + "/weapon-fusions/"
         };
 
         const destination = routes[page] || routes.home;
@@ -4997,6 +5001,192 @@ thumbClearBtn?.addEventListener("click", () => {
         renderChallenges();
       }
 
+
+      function setupWeaponFusions(){
+        const page = document.getElementById("weaponFusionsPage");
+        if (!page) return;
+
+        const slotBtns = [document.getElementById("fusionSlotA"), document.getElementById("fusionSlotB")];
+        const resultSlot = document.getElementById("fusionResultSlot");
+        const resultImg = resultSlot?.querySelector(".fusion-result-img");
+        const resultName = resultSlot?.querySelector(".fusion-result-name");
+        const resultRecipe = resultSlot?.querySelector(".fusion-result-recipe");
+        const fuseBtn = document.getElementById("fusionFuseBtn");
+        const clearBtn = document.getElementById("fusionClearBtn");
+        const note = document.getElementById("fusionRecipeNote");
+        const modal = document.getElementById("fusionPickerModal");
+        const pickerGrid = document.getElementById("fusionPickerGrid");
+        const pickerClose = document.getElementById("fusionPickerClose");
+        const pickerSearch = document.getElementById("fusionPickerSearch");
+
+        let activeFusionSlot = 0;
+        let fusionSelections = [null, null];
+
+        const getWeapon = name => allWeapons.find(w => w.name === name);
+        const keyFor = (a, b) => [a, b].map(v => String(v || "").toLowerCase()).sort().join(" + ");
+
+        const fusionRecipes = new Map([
+          [keyFor("Assault Rifle", "Freeze Ray"), { result: "Permafrost", reason: "automatic rifle pressure frozen into Permafrost tech" }],
+          [keyFor("Handgun", "Spray"), { result: "Uzi", reason: "a compact pistol upgraded into rapid-fire spray control" }],
+          [keyFor("Revolver", "Spray"), { result: "Uzi", reason: "sidearm precision mixed with spray fire rate" }],
+          [keyFor("Bow", "Crossbow"), { result: "RPG", reason: "projectile weapons fused into a heavier launcher" }],
+          [keyFor("Grenade", "Launcher"), { result: "Grenade Launcher", reason: "explosives attached to a dedicated launcher system" }],
+          [keyFor("Grenade", "RPG"), { result: "Grenade Launcher", reason: "explosive power reshaped for repeat launches" }],
+          [keyFor("Energy Rifle", "Freeze Ray"), { result: "Permafrost", reason: "energy tech chilled into a freezing rifle variant" }],
+          [keyFor("Energy Rifle", "Energy Pistols"), { result: "Exogun", reason: "energy weapons compressed into a high-tech exo weapon" }],
+          [keyFor("Sniper", "Revolver"), { result: "Exogun", reason: "precision damage fused into a futuristic sidearm" }],
+          [keyFor("Shotgun", "Shorty"), { result: "Flamethrower", reason: "close-range burst power becomes area pressure" }],
+          [keyFor("Katana", "Scythe"), { result: "Battle Axe", reason: "two blades merged into a heavier melee weapon" }],
+          [keyFor("Knife", "Daggers"), { result: "Katana", reason: "small blades forged into one stronger blade" }],
+          [keyFor("Fists", "Riot Shield"), { result: "Spear", reason: "brawler defense converted into reach and control" }],
+          [keyFor("Grappler", "Warpstone"), { result: "Warper", reason: "movement utility turned into full teleport pressure" }],
+          [keyFor("Subspace Tripmine", "Grenade"), { result: "Satchel", reason: "trap explosives fused into controlled detonation" }],
+          [keyFor("Molotov", "Grenade"), { result: "Flamethrower", reason: "fire explosives refined into constant flame output" }],
+          [keyFor("Jump Pad", "Grappler"), { result: "Warpstone", reason: "mobility tools converted into instant repositioning" }],
+          [keyFor("Paintball Gun", "Slingshot"), { result: "Bow", reason: "arc projectiles fused into a stronger ranged weapon" }],
+          [keyFor("Minigun", "Assault Rifle"), { result: "Burst Rifle", reason: "automatic fire stabilized into burst control" }],
+          [keyFor("RPG", "Minigun"), { result: "Grenade Launcher", reason: "heavy firepower converted into explosive spam" }],
+          [keyFor("Scepter", "War Horn"), { result: "Warper", reason: "support magic and sound pressure create battlefield control" }],
+          [keyFor("Medkit", "Elixir"), { result: "Scepter", reason: "support items fused into a magical support weapon" }],
+          [keyFor("Smoke Grenade", "Flashbang"), { result: "Freeze Ray", reason: "utility disruption hardened into crowd control" }],
+          [keyFor("Trowel", "Riot Shield"), { result: "Subspace Tripmine", reason: "defensive setup becomes a trap-based tool" }]
+        ]);
+
+        const categoryFallbacks = [
+          { test: (a,b) => a.category === "Primary" && b.category === "Primary", result: "Burst Rifle", reason: "two primaries balanced into a flexible rifle" },
+          { test: (a,b) => a.category === "Secondary" && b.category === "Secondary", result: "Uzi", reason: "two secondaries fused into fast backup pressure" },
+          { test: (a,b) => a.category === "Melee" && b.category === "Melee", result: "Battle Axe", reason: "melee power stacked into a heavier blade" },
+          { test: (a,b) => a.category === "Utility" && b.category === "Utility", result: "Warpstone", reason: "utility tools fused into stronger mobility control" },
+          { test: (a,b) => [a.category,b.category].includes("Primary") && [a.category,b.category].includes("Utility"), result: "Warper", reason: "a weapon plus utility creates map-control pressure" },
+          { test: (a,b) => [a.category,b.category].includes("Primary") && [a.category,b.category].includes("Secondary"), result: "Exogun", reason: "main weapon damage mixed with backup flexibility" },
+          { test: (a,b) => [a.category,b.category].includes("Melee") && [a.category,b.category].includes("Utility"), result: "Spear", reason: "melee range mixed with utility control" },
+          { test: (a,b) => [a.category,b.category].includes("Melee") && [a.category,b.category].includes("Secondary"), result: "Daggers", reason: "close-range pressure becomes quick melee burst" }
+        ];
+
+        const setFusionImage = (img, weapon) => {
+          if (!img || !weapon) return;
+          img.onerror = null;
+          img.src = weapon.img || placeholderSvg(weapon.name, weapon.category || "Weapon");
+          img.alt = weapon.name;
+          img.hidden = false;
+        };
+
+        const renderFusionSlot = index => {
+          const btn = slotBtns[index];
+          if (!btn) return;
+          const weapon = fusionSelections[index];
+          const img = btn.querySelector(".fusion-weapon-img");
+          const plus = btn.querySelector(".fusion-plus");
+          const name = btn.querySelector(".fusion-weapon-name");
+          btn.classList.toggle("has-weapon", Boolean(weapon));
+          if (weapon) {
+            setFusionImage(img, weapon);
+            if (plus) plus.hidden = true;
+            if (name) name.textContent = weapon.name;
+          } else {
+            if (img) { img.hidden = true; img.removeAttribute("src"); }
+            if (plus) plus.hidden = false;
+            if (name) name.textContent = "Choose Weapon";
+          }
+        };
+
+        const pickFusionResult = () => {
+          const [a, b] = fusionSelections;
+          if (!a || !b) return null;
+          const direct = fusionRecipes.get(keyFor(a.name, b.name));
+          if (direct && getWeapon(direct.result)) return direct;
+
+          const fallback = categoryFallbacks.find(rule => rule.test(a, b));
+          if (fallback && getWeapon(fallback.result)) return fallback;
+
+          const pool = allWeapons.filter(w => w.name !== a.name && w.name !== b.name);
+          const seed = (a.name + b.name).split("").reduce((sum, ch) => sum + ch.charCodeAt(0), 0);
+          const result = pool[seed % pool.length] || allWeapons[0];
+          return { result: result.name, reason: "Rivals RNG stabilized the fusion into a new weapon" };
+        };
+
+        const renderResult = (animate = false) => {
+          const [a, b] = fusionSelections;
+          if (!a || !b) {
+            if (resultImg) { resultImg.hidden = true; resultImg.removeAttribute("src"); }
+            if (resultName) resultName.textContent = "Select 2 weapons";
+            if (resultRecipe) resultRecipe.textContent = "Waiting for ingredients...";
+            note.textContent = "Tip: try combinations like Assault Rifle + Freeze Ray, Handgun + Spray, or Bow + Crossbow.";
+            resultSlot?.classList.remove("is-fusing", "has-result");
+            return;
+          }
+
+          const fusion = pickFusionResult();
+          const resultWeapon = getWeapon(fusion.result) || allWeapons[0];
+          resultSlot?.classList.toggle("is-fusing", Boolean(animate));
+          resultSlot?.classList.add("has-result");
+          if (animate) setTimeout(() => resultSlot?.classList.remove("is-fusing"), 650);
+          setFusionImage(resultImg, resultWeapon);
+          if (resultName) resultName.textContent = resultWeapon.name;
+          if (resultRecipe) resultRecipe.textContent = `${a.name} + ${b.name}`;
+          note.textContent = fusion.reason ? `${a.name} + ${b.name} → ${resultWeapon.name}: ${fusion.reason}.` : `${a.name} + ${b.name} → ${resultWeapon.name}`;
+        };
+
+        const renderPicker = () => {
+          const q = (pickerSearch?.value || "").toLowerCase().trim();
+          const items = allWeapons.filter(w => `${w.name} ${w.category} ${w.tier}`.toLowerCase().includes(q));
+          pickerGrid.innerHTML = items.map((weapon, index) => `
+            <button class="fusion-picker-card" type="button" data-fusion-pick="${weapon.name}">
+              <img src="${weapon.img || placeholderSvg(weapon.name, weapon.category)}" alt="" draggable="false" />
+              <span>${escapeHtml(weapon.name)}</span>
+              <small>${escapeHtml(weapon.category || "Weapon")}</small>
+            </button>
+          `).join("");
+        };
+
+        const openPicker = index => {
+          activeFusionSlot = index;
+          modal?.classList.add("open");
+          modal?.setAttribute("aria-hidden", "false");
+          if (pickerSearch) pickerSearch.value = "";
+          renderPicker();
+        };
+
+        const closePicker = () => {
+          modal?.classList.remove("open");
+          modal?.setAttribute("aria-hidden", "true");
+        };
+
+        slotBtns.forEach((btn, index) => {
+          btn?.addEventListener("click", () => openPicker(index));
+        });
+
+        pickerClose?.addEventListener("click", closePicker);
+        modal?.addEventListener("click", event => { if (event.target === modal) closePicker(); });
+        pickerSearch?.addEventListener("input", renderPicker);
+
+        pickerGrid?.addEventListener("click", event => {
+          const btn = event.target.closest("[data-fusion-pick]");
+          if (!btn) return;
+          const weapon = getWeapon(btn.dataset.fusionPick);
+          if (!weapon) return;
+          fusionSelections[activeFusionSlot] = weapon;
+          renderFusionSlot(activeFusionSlot);
+          renderResult(true);
+          closePicker();
+        });
+
+        fuseBtn?.addEventListener("click", () => renderResult(true));
+
+        clearBtn?.addEventListener("click", () => {
+          fusionSelections = [null, null];
+          renderFusionSlot(0);
+          renderFusionSlot(1);
+          renderResult(false);
+        });
+
+        renderFusionSlot(0);
+        renderFusionSlot(1);
+        renderResult(false);
+      }
+
+
+      setupWeaponFusions();
       setupChallengeRoadBuilder();
       setupTierListBuilder();
       setupThumbnailBuilder();
@@ -5269,7 +5459,7 @@ thumbClearBtn?.addEventListener("click", () => {
         }
 
         if (
-          ![titleSrc, window.__kudaRandomizerTitleSrc, window.__kudaScreenTitleSrc, window.__kudaHomeTitleSrc, window.__kudaThumbnailTitleSrc, window.__kudaTierTitleSrc, window.__kudaChallengeTitleSrc, window.__kudaChallengeTitleSrc].filter(Boolean).includes(currentTitleImg.getAttribute('src'))
+          ![titleSrc, window.__kudaRandomizerTitleSrc, window.__kudaScreenTitleSrc, window.__kudaHomeTitleSrc, window.__kudaThumbnailTitleSrc, window.__kudaTierTitleSrc, window.__kudaChallengeTitleSrc, window.__kudaFusionTitleSrc, window.__kudaChallengeTitleSrc].filter(Boolean).includes(currentTitleImg.getAttribute('src'))
         ) {
           triggerRefresh();
         }
