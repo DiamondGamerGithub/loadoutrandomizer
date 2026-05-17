@@ -5718,3 +5718,55 @@ body:not(.fusion-page) .weapon-fusions-page { display: none !important; }
 .home-tool-card[data-home-page="tier"], .home-tool-card[data-home-page="challenge"], .home-tool-card[data-home-page="fusion"] { grid-column: auto !important; justify-self: stretch !important; }
 @media (max-width: 1100px) { .home-tool-grid { grid-template-columns: repeat(2, minmax(0, 1fr)) !important; } }
 @media (max-width: 680px) { .home-tool-grid { grid-template-columns: 1fr !important; } }
+
+
+/* v89 Home page layout repair */
+body.home-page .home-page-section {
+  width: 100% !important;
+  max-width: 1320px !important;
+  margin-left: auto !important;
+  margin-right: auto !important;
+}
+
+body.home-page .home-tool-grid {
+  display: grid !important;
+  grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+  gap: 18px !important;
+  max-width: 1320px !important;
+  width: 100% !important;
+  margin: 0 auto 22px !important;
+  align-items: stretch !important;
+}
+
+body.home-page .home-tool-card,
+body.home-page .home-tool-card[data-home-page="randomizer"],
+body.home-page .home-tool-card[data-home-page="thumbnail"],
+body.home-page .home-tool-card[data-home-page="screen"],
+body.home-page .home-tool-card[data-home-page="tier"],
+body.home-page .home-tool-card[data-home-page="challenge"],
+body.home-page .home-tool-card[data-home-page="fusion"] {
+  grid-column: auto !important;
+  grid-row: auto !important;
+  justify-self: stretch !important;
+  width: 100% !important;
+  min-width: 0 !important;
+}
+
+body.home-page .home-card-image-wrap {
+  aspect-ratio: 16 / 9 !important;
+  width: 100% !important;
+}
+
+@media (max-width: 900px) {
+  body.home-page .home-tool-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+    max-width: 760px !important;
+  }
+}
+
+@media (max-width: 560px) {
+  body.home-page .home-tool-grid {
+    grid-template-columns: 1fr !important;
+    max-width: 420px !important;
+  }
+}
