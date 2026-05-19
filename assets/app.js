@@ -1937,12 +1937,27 @@ const exactAssetFileMap = {"10bvisits":["Skins2/10BVisits_Icon.png"],"10bvisitsi
             ctx.shadowOffsetX = options.shadow.x || 0;
             ctx.shadowOffsetY = options.shadow.y || 12;
           }
+
+          const drawContained = (dx, dy, dw, dh) => {
+            if (!options.contain) {
+              ctx.drawImage(loaded, dx, dy, dw, dh);
+              return;
+            }
+            const ir = (loaded.naturalWidth || loaded.width || 1) / Math.max(loaded.naturalHeight || loaded.height || 1, 1);
+            const br = dw / Math.max(dh, 1);
+            let cw = dw;
+            let ch = dh;
+            if (ir > br) ch = dw / ir;
+            else cw = dh * ir;
+            ctx.drawImage(loaded, dx + (dw - cw) / 2, dy + (dh - ch) / 2, cw, ch);
+          };
+
           if (options.rotate) {
             ctx.translate(x + w / 2, y + h / 2);
             ctx.rotate(options.rotate);
-            ctx.drawImage(loaded, -w / 2, -h / 2, w, h);
+            drawContained(-w / 2, -h / 2, w, h);
           } else {
-            ctx.drawImage(loaded, x, y, w, h);
+            drawContained(x, y, w, h);
           }
           ctx.restore();
           return true;
@@ -1998,6 +2013,7 @@ const exactAssetFileMap = {"10bvisits":["Skins2/10BVisits_Icon.png"],"10bvisitsi
           if (!liveImg || liveImg.hidden || !liveImg.src) continue;
           const box = mapRect(liveImg.getBoundingClientRect());
           await drawDomImage(liveImg, box.x, box.y, box.w, box.h, {
+            contain: true,
             shadow: { color: "rgba(0,0,0,0.40)", blur: 22, y: 14 }
           });
         }
@@ -3992,7 +4008,7 @@ thumbClearBtn?.addEventListener("click", () => {
           if (thumb2State.showText) {
             const fontFamily = currentThumb2Font==='default' ? 'Bungee, Arial Black, Impact, sans-serif' : (currentThumb2Font==='custom' ? (getComputedStyle(thumb2Canvas).getPropertyValue('--thumb2-custom-font').replace(/'/g,'').trim() || 'Rubik') : 'Rubik, system-ui, sans-serif');
             const x=W*0.955 + Number(thumb2State.textX||0), yText=H*0.03 + Number(thumb2State.textY||0), fontSize=118*(Number(thumb2State.textScale)||1);
-            const text=(thumb2State.text||'ALL FREE').trim().toUpperCase(); ctx.lineJoin='round'; ctx.textAlign='right'; ctx.textBaseline='top'; ctx.fillStyle='#fff'; ctx.strokeStyle=thumb2State.outlineColor||'#000'; ctx.lineWidth=Number(thumb2State.outlineSize||6)*2; ctx.font=`1000 ${fontSize}px ${fontFamily}`; ctx.strokeText(text,x,yText); ctx.fillText(text,x,yText);
+            const text=(thumb2State.text||'ALL FREE').trim().toUpperCase(); ctx.lineJoin='round'; ctx.textAlign='right'; ctx.textBaseline='top'; ctx.shadowColor='rgba(0,0,0,0.38)'; ctx.shadowBlur=10; ctx.shadowOffsetY=6; ctx.fillStyle='#fff'; ctx.strokeStyle=thumb2State.outlineColor||'#000'; ctx.lineWidth=Number(thumb2State.outlineSize||6)*2; ctx.font=`1000 ${fontSize}px ${fontFamily}`; ctx.strokeText(text,x,yText); ctx.fillText(text,x,yText);
           }
           if (thumb2State.showArrow) {
             ctx.save();
@@ -4022,13 +4038,17 @@ thumbClearBtn?.addEventListener("click", () => {
               const scale = Number(state.scale)||1;
               const iw=rect.w*1.24*scale, ih=rect.h*1.16*scale;
               const cx=rect.x+rect.w/2+(Number(state.imageX)||0), cy=rect.y+rect.h*0.44+(Number(state.imageY)||0);
-              ctx.save(); ctx.shadowColor='rgba(0,0,0,0.56)'; ctx.shadowBlur=18; ctx.shadowOffsetX=0; ctx.shadowOffsetY=12; ctx.drawImage(img,cx-iw/2,cy-ih/2,iw,ih); ctx.restore();
+              const ir = (img.naturalWidth || img.width || 1) / Math.max(img.naturalHeight || img.height || 1, 1);
+              let dw = iw, dh = ih;
+              if (ir > iw / Math.max(ih, 1)) dh = iw / ir;
+              else dw = ih * ir;
+              ctx.save(); ctx.shadowColor='rgba(0,0,0,0.56)'; ctx.shadowBlur=18; ctx.shadowOffsetX=0; ctx.shadowOffsetY=12; ctx.drawImage(img,cx-dw/2,cy-dh/2,dw,dh); ctx.restore();
             } catch(err) { console.warn('Thumbnail 2 export image skipped:', imgSrc, err); }
             if (thumb2State.showWeaponText) {
               const label=getThumb2DisplayName(state.weapon);
               const lx=rect.x+rect.w/2+(Number(state.labelX)||0), ly=rect.y+rect.h-(rect.h*0.055)-(Number(state.labelY)||0), fs=Math.max(24, 34*(Number(state.labelScale)||1));
               const fontFamily = currentThumb2Font==='default' ? 'Bungee, Arial Black, Impact, sans-serif' : (currentThumb2Font==='custom' ? (getComputedStyle(thumb2Canvas).getPropertyValue('--thumb2-custom-font').replace(/'/g,'').trim() || 'Rubik') : 'Rubik, system-ui, sans-serif');
-              ctx.textAlign='center'; ctx.textBaseline='alphabetic'; ctx.fillStyle='#fff'; ctx.strokeStyle=thumb2State.outlineColor||'#000'; ctx.lineWidth=5; ctx.font=`1000 ${fs}px ${fontFamily}`; ctx.strokeText(label,lx,ly); ctx.fillText(label,lx,ly);
+              ctx.textAlign='center'; ctx.textBaseline='alphabetic'; ctx.shadowColor='rgba(0,0,0,0.48)'; ctx.shadowBlur=8; ctx.shadowOffsetY=5; ctx.fillStyle='#fff'; ctx.strokeStyle=thumb2State.outlineColor||'#000'; ctx.lineWidth=5; ctx.font=`1000 ${fs}px ${fontFamily}`; ctx.strokeText(label,lx,ly); ctx.fillText(label,lx,ly);
             }
           });
           await Promise.all(slotPromise);
@@ -4474,39 +4494,179 @@ thumbClearBtn?.addEventListener("click", () => {
           renderAddedItemsSearch();
         });
 
-        const ensureHtml2CanvasForTier = async () => {
-          if (window.html2canvas) return window.html2canvas;
-          await new Promise((resolve, reject) => {
-            const existing = document.getElementById("html2canvasLoader");
-            if (existing) {
-              existing.addEventListener("load", resolve, { once: true });
-              existing.addEventListener("error", reject, { once: true });
-              return;
-            }
-            const script = document.createElement("script");
-            script.id = "html2canvasLoader";
-            script.src = "https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js";
-            script.onload = resolve;
-            script.onerror = reject;
-            document.head.appendChild(script);
+        const loadTierExportImage = src => new Promise((resolve, reject) => {
+          if (!src) return reject(new Error("Missing image"));
+          const img = new Image();
+          if (!String(src).startsWith("data:") && !String(src).startsWith("blob:")) img.crossOrigin = "anonymous";
+          img.onload = () => resolve(img);
+          img.onerror = reject;
+          img.src = src;
+        });
+
+        const roundRectTier = (ctx, x, y, w, h, r) => {
+          const rr = Math.min(r, w / 2, h / 2);
+          ctx.beginPath();
+          ctx.moveTo(x + rr, y);
+          ctx.lineTo(x + w - rr, y);
+          ctx.quadraticCurveTo(x + w, y, x + w, y + rr);
+          ctx.lineTo(x + w, y + h - rr);
+          ctx.quadraticCurveTo(x + w, y + h, x + w - rr, y + h);
+          ctx.lineTo(x + rr, y + h);
+          ctx.quadraticCurveTo(x, y + h, x, y + h - rr);
+          ctx.lineTo(x, y + rr);
+          ctx.quadraticCurveTo(x, y, x + rr, y);
+          ctx.closePath();
+        };
+
+        const drawTierImageContain = (ctx, img, cx, cy, maxW, maxH) => {
+          const ir = (img.naturalWidth || img.width || 1) / Math.max(img.naturalHeight || img.height || 1, 1);
+          let dw = maxW;
+          let dh = maxW / ir;
+          if (dh > maxH) { dh = maxH; dw = maxH * ir; }
+          ctx.drawImage(img, cx - dw / 2, cy - dh / 2, dw, dh);
+        };
+
+        const exportTierBoardCanvas = async () => {
+          if (document.fonts?.ready) {
+            try { await document.fonts.ready; } catch (err) {}
+          }
+          const boardRect = tierBoard.getBoundingClientRect();
+          const scale = 2;
+          const W = Math.max(1200, Math.round(boardRect.width * scale));
+          const H = Math.max(720, Math.round(boardRect.height * scale));
+          const canvas = document.createElement("canvas");
+          canvas.width = W;
+          canvas.height = H;
+          const ctx = canvas.getContext("2d");
+
+          const map = rect => ({
+            x: (rect.left - boardRect.left) * scale,
+            y: (rect.top - boardRect.top) * scale,
+            w: rect.width * scale,
+            h: rect.height * scale
           });
-          return window.html2canvas;
+
+          ctx.clearRect(0, 0, W, H);
+          ctx.save();
+          roundRectTier(ctx, 0, 0, W, H, 26 * scale);
+          ctx.clip();
+          ctx.fillStyle = "#111827";
+          ctx.fillRect(0, 0, W, H);
+
+          const tierColors = {
+            S: ["#f2495f", "#dc2445"],
+            A: ["#ffb347", "#e6821c"],
+            B: ["#ffe45f", "#e0bd29"],
+            C: ["#65d87d", "#36aa56"],
+            D: ["#5aa6ff", "#3478d8"],
+            F: ["#8b63ff", "#6740d7"]
+          };
+
+          for (const row of Array.from(tierBoard.querySelectorAll(".tier-row"))) {
+            const tier = row.dataset.tier || "";
+            const rowBox = map(row.getBoundingClientRect());
+            const labelEl = row.querySelector(".tier-label");
+            const zone = row.querySelector(".tier-dropzone");
+            const labelBox = map(labelEl.getBoundingClientRect());
+            const zoneBox = map(zone.getBoundingClientRect());
+
+            ctx.fillStyle = "#111827";
+            ctx.fillRect(rowBox.x, rowBox.y, rowBox.w, rowBox.h);
+            ctx.fillStyle = "rgba(255,255,255,0.055)";
+            ctx.fillRect(zoneBox.x, rowBox.y, zoneBox.w, rowBox.h);
+            ctx.strokeStyle = "rgba(255,255,255,0.07)";
+            ctx.lineWidth = 1 * scale;
+            ctx.beginPath();
+            ctx.moveTo(rowBox.x, rowBox.y + rowBox.h);
+            ctx.lineTo(rowBox.x + rowBox.w, rowBox.y + rowBox.h);
+            ctx.stroke();
+
+            const colors = tierColors[tier] || ["#777", "#555"];
+            const g = ctx.createLinearGradient(labelBox.x, labelBox.y, labelBox.x + labelBox.w, labelBox.y + labelBox.h);
+            g.addColorStop(0, colors[0]);
+            g.addColorStop(1, colors[1]);
+            ctx.fillStyle = g;
+            ctx.fillRect(labelBox.x, labelBox.y, labelBox.w, labelBox.h);
+
+            ctx.save();
+            ctx.shadowColor = "rgba(0,0,0,0.45)";
+            ctx.shadowBlur = 10 * scale;
+            ctx.fillStyle = "#ffffff";
+            ctx.font = `1000 ${Math.max(38 * scale, labelBox.h * 0.42)}px Rubik, Arial Black, sans-serif`;
+            ctx.textAlign = "center";
+            ctx.textBaseline = "middle";
+            ctx.fillText(tier, labelBox.x + labelBox.w / 2, labelBox.y + labelBox.h / 2 + 1 * scale);
+            ctx.restore();
+
+            const cards = Array.from(zone.querySelectorAll(".tier-item-card"));
+            for (const card of cards) {
+              if (getComputedStyle(card).display === "none") continue;
+              const cardBox = map(card.getBoundingClientRect());
+              const item = card.__tierItem || {};
+              const imgEl = card.querySelector("img");
+              const label = item.name || card.querySelector("span")?.textContent || "Item";
+              const meta = item.category || card.querySelector("small")?.textContent || "";
+
+              ctx.save();
+              ctx.globalAlpha = 0.96;
+              ctx.shadowColor = "rgba(0,0,0,0.26)";
+              ctx.shadowBlur = 10 * scale;
+              ctx.shadowOffsetY = 4 * scale;
+              ctx.fillStyle = "rgba(255,255,255,0.025)";
+              roundRectTier(ctx, cardBox.x, cardBox.y, cardBox.w, cardBox.h, 12 * scale);
+              ctx.fill();
+              ctx.restore();
+
+              try {
+                const img = await loadTierExportImage(imgEl?.currentSrc || imgEl?.src || item.img || "");
+                ctx.save();
+                ctx.shadowColor = "rgba(0,0,0,0.45)";
+                ctx.shadowBlur = 10 * scale;
+                ctx.shadowOffsetY = 6 * scale;
+                drawTierImageContain(ctx, img, cardBox.x + cardBox.w / 2, cardBox.y + cardBox.h * 0.38, cardBox.w * 0.72, cardBox.h * 0.48);
+                ctx.restore();
+              } catch (err) {}
+
+              ctx.save();
+              ctx.font = `1000 ${Math.max(11 * scale, cardBox.w * 0.105)}px Rubik, Arial, sans-serif`;
+              ctx.textAlign = "center";
+              ctx.textBaseline = "middle";
+              ctx.lineJoin = "round";
+              ctx.strokeStyle = "rgba(0,0,0,0.72)";
+              ctx.lineWidth = 3 * scale;
+              ctx.fillStyle = "#ffffff";
+              const maxChars = cardBox.w < 110 * scale ? 12 : 16;
+              const title = label.length > maxChars ? label.slice(0, maxChars - 1) + "…" : label;
+              const tx = cardBox.x + cardBox.w / 2;
+              const ty = cardBox.y + cardBox.h * 0.78;
+              ctx.strokeText(title, tx, ty);
+              ctx.fillText(title, tx, ty);
+              if (meta) {
+                ctx.font = `900 ${Math.max(8 * scale, cardBox.w * 0.075)}px Rubik, Arial, sans-serif`;
+                ctx.fillStyle = "rgba(215,222,242,0.88)";
+                ctx.fillText(String(meta).toUpperCase().slice(0, 18), tx, cardBox.y + cardBox.h * 0.91);
+              }
+              ctx.restore();
+            }
+          }
+          ctx.restore();
+          return canvas;
         };
 
         tierDownloadBtn?.addEventListener("click", async () => {
           try {
-            const html2canvas = await ensureHtml2CanvasForTier();
-            const canvas = await html2canvas(tierBoard, { backgroundColor: null, scale: 2, useCORS: true, logging: false });
+            const canvas = await exportTierBoardCanvas();
             canvas.toBlob(blob => {
               if (!blob) return;
               const a = document.createElement("a");
               a.href = URL.createObjectURL(blob);
-              a.download = "kuda-tier-list.png";
+              a.download = "rivalstools-tier-list.png";
               document.body.appendChild(a);
               a.click();
               setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 250);
             }, "image/png");
           } catch (err) {
+            console.error(err);
             alert("Download failed. Try running the site through localhost or GitHub Pages so the browser can export the tier list.");
           }
         });
@@ -4927,7 +5087,7 @@ thumbClearBtn?.addEventListener("click", () => {
             for (const challenge of challenges) {
               const cx = challenge.x / 100 * W;
               const cy = challenge.y / 100 * H;
-              const size = 104 * (W / stage.getBoundingClientRect().width);
+              const size = 116 * (W / 2560);
               const iconSize = size * Number(challenge.scale || 1);
               if (false) {
                 ctx.save();
@@ -4955,7 +5115,12 @@ thumbClearBtn?.addEventListener("click", () => {
                   if (challenge.blurred) ctx.filter = `blur(${(Number(challenge.blurAmount) || 3) * 2}px)`;
                   ctx.shadowColor = "rgba(0,0,0,0.35)";
                   ctx.shadowBlur = 22;
-                  ctx.drawImage(icon, cx - iconSize*0.44, cy - iconSize*0.44, iconSize*0.88, iconSize*0.88);
+                  const ir = (icon.naturalWidth || icon.width || 1) / Math.max(icon.naturalHeight || icon.height || 1, 1);
+                  let dw = iconSize * 0.88;
+                  let dh = iconSize * 0.88;
+                  if (ir > 1) dh = dw / ir;
+                  else dw = dh * ir;
+                  ctx.drawImage(icon, cx - dw / 2, cy - dh / 2, dw, dh);
                   ctx.restore();
                 } catch (err) {}
               } else {

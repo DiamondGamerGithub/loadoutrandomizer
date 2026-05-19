@@ -5823,3 +5823,91 @@ body.home-page #homePage .home-card-image-wrap,
     max-width: 420px !important;
   }
 }
+
+
+/* v93 global export/fullscreen stability fixes */
+.screen-stage:fullscreen,
+.thumb-stage:fullscreen,
+.thumb2-stage:fullscreen {
+  background: #050915 !important;
+  width: 100vw !important;
+  height: 100vh !important;
+  max-width: none !important;
+  max-height: none !important;
+  border-radius: 0 !important;
+  display: grid !important;
+  place-items: center !important;
+  overflow: hidden !important;
+}
+
+.screen-stage:fullscreen > .screen-bg-image,
+.screen-stage:fullscreen > .screen-loadout-title,
+.screen-stage:fullscreen > .screen-slot-row {
+  transform-origin: center center !important;
+}
+
+.screen-stage:fullscreen {
+  aspect-ratio: auto !important;
+}
+
+.screen-stage:fullscreen::before,
+.thumb-stage:fullscreen::before,
+.thumb2-stage:fullscreen::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  background: #050915;
+  z-index: -1;
+}
+
+.screen-stage:fullscreen .screen-bg-image {
+  width: min(100vw, calc(100vh * 16 / 9)) !important;
+  height: min(100vh, calc(100vw * 9 / 16)) !important;
+  left: 50% !important;
+  top: 50% !important;
+  transform: translate(-50%, -50%) scale(calc(var(--screen-zoom, 1) + (var(--screen-blur-num, 0) * 0.006))) !important;
+  object-fit: cover !important;
+}
+
+.screen-stage:fullscreen .screen-loadout-title,
+.screen-stage:fullscreen .screen-slot-row {
+  width: min(100vw, calc(100vh * 16 / 9)) !important;
+  max-width: none !important;
+}
+
+.screen-stage:fullscreen .screen-selected-weapon {
+  object-fit: contain !important;
+  width: 112% !important;
+  height: 112% !important;
+  max-width: none !important;
+  max-height: none !important;
+  transform: translate(-50%, -50%) scale(var(--slot-weapon-scale, 1.18)) !important;
+}
+
+.thumb-stage:fullscreen .thumb-canvas {
+  width: min(100vw, calc(100vh * 16 / 9)) !important;
+  height: min(100vh, calc(100vw * 9 / 16)) !important;
+  max-width: none !important;
+  max-height: none !important;
+  aspect-ratio: 16 / 9 !important;
+  border-radius: 0 !important;
+}
+
+.thumb2-stage:fullscreen .thumb2-canvas {
+  left: 50% !important;
+  top: 50% !important;
+  width: 1280px !important;
+  height: 720px !important;
+  transform: translate(-50%, -50%) scale(var(--thumb2-render-scale, 1)) !important;
+  transform-origin: center center !important;
+}
+
+.tier-item-card img,
+.fusion-weapon-img,
+.fusion-result-img,
+.screen-selected-weapon,
+.thumb-weapon-img,
+.thumb2-weapon-img,
+.challenge-icon {
+  object-fit: contain !important;
+}
