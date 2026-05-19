@@ -4227,7 +4227,8 @@ thumbClearBtn?.addEventListener("click", () => {
           nextId: 1,
           global: { brightness: 1, saturation: 1, hue: 0, darkness: 0 }
         };
-        const defaultThumb3Weapon = () => getWeapon('Assault Rifle') || getWeapon('Handgun') || allWeapons[0] || { name:'Weapon', category:'Weapon', img: placeholderSvg('Weapon', 'Weapon') };
+        const thumb3GetWeapon = name => allWeapons.find(w => w.name === name);
+        const defaultThumb3Weapon = () => thumb3GetWeapon('Assault Rifle') || thumb3GetWeapon('Handgun') || allWeapons[0] || { name:'Weapon', category:'Weapon', img: placeholderSvg('Weapon', 'Weapon') };
         const createThumb3Id = () => `thumb3_${thumb3State.nextId++}`;
         const thumb3WeaponOptionsHtml = () => allWeapons.map(w => `<option value="${escapeHtml(w.name)}">${escapeHtml(w.name)}</option>`).join('');
         thumb3WeaponSelect.innerHTML = thumb3WeaponOptionsHtml();
@@ -4296,6 +4297,15 @@ thumbClearBtn?.addEventListener("click", () => {
           wrapper.style.transform = `translate(-50%, -50%) translate(${element.x}px, ${element.y}px) scale(${(element.scale || 1) * (element.stretchX || 1)}, ${(element.scale || 1) * (element.stretchY || 1)})`;
           wrapper.title = 'Drag to reposition';
 
+          const addThumb3ResizeHandles = () => {
+            ['nw', 'ne', 'sw', 'se'].forEach(pos => {
+              const handle = document.createElement('span');
+              handle.className = `thumb3-resize-handle thumb3-resize-${pos}`;
+              handle.dataset.thumb3Resize = pos;
+              wrapper.appendChild(handle);
+            });
+          };
+
           if (element.type === 'text') {
             const text = document.createElement('div');
             text.className = 'thumb3-text-node';
@@ -4305,6 +4315,7 @@ thumbClearBtn?.addEventListener("click", () => {
             text.style.webkitTextStroke = element.strokeEnabled ? `${element.strokeSize || 0}px ${element.strokeColor || '#000000'}` : '0 transparent';
             text.style.textShadow = element.shadowEnabled ? `${element.shadowX || 0}px ${element.shadowY || 0}px ${element.shadowBlur || 0}px rgba(${parseInt((element.shadowColor || '#000000').slice(1,3),16)},${parseInt((element.shadowColor || '#000000').slice(3,5),16)},${parseInt((element.shadowColor || '#000000').slice(5,7),16)},${Number(element.shadowOpacity || 0)})` : 'none';
             wrapper.appendChild(text);
+            addThumb3ResizeHandles();
             return wrapper;
           }
 
@@ -4315,6 +4326,7 @@ thumbClearBtn?.addEventListener("click", () => {
             img.alt = element.weaponName || 'Weapon';
             img.draggable = false;
             wrapper.appendChild(img);
+            addThumb3ResizeHandles();
             return wrapper;
           }
 
@@ -4325,6 +4337,7 @@ thumbClearBtn?.addEventListener("click", () => {
             img.alt = 'Custom image';
             img.draggable = false;
             wrapper.appendChild(img);
+            addThumb3ResizeHandles();
             return wrapper;
           }
 
@@ -4351,6 +4364,7 @@ thumbClearBtn?.addEventListener("click", () => {
             slotBg.appendChild(label);
           }
           wrapper.appendChild(slotBg);
+          addThumb3ResizeHandles();
           return wrapper;
         };
 
@@ -4414,7 +4428,7 @@ thumbClearBtn?.addEventListener("click", () => {
         };
 
         const setThumb3Weapon = (element, weaponName) => {
-          const weapon = getWeapon(weaponName) || allWeapons.find(w => w.name === weaponName) || defaultThumb3Weapon();
+          const weapon = thumb3GetWeapon(weaponName) || allWeapons.find(w => w.name === weaponName) || defaultThumb3Weapon();
           element.weaponName = weapon.name;
           element.weaponImg = weapon.img || placeholderSvg(weapon.name, weapon.category);
           element.src = weapon.img || placeholderSvg(weapon.name, weapon.category);
@@ -4527,7 +4541,12 @@ thumbClearBtn?.addEventListener("click", () => {
           event.preventDefault();
           event.stopPropagation();
           closeThumb3AddModal();
-          thumb3AddByType(btn.dataset.thumb3Add);
+          try {
+            thumb3AddByType(btn.dataset.thumb3Add);
+          } catch (err) {
+            console.error('Custom thumbnail add failed:', err);
+            alert('Could not add that element. Please try again.');
+          }
         });
 
         document.addEventListener('keydown', event => {
@@ -4605,20 +4624,59 @@ thumbClearBtn?.addEventListener("click", () => {
           const id = target.dataset.thumb3Element;
           const element = thumb3State.elements.find(item => item.id === id);
           if (!element) return;
+
           selectThumb3Element(id);
           event.preventDefault();
-          thumb3Drag = { id, startX: event.clientX, startY: event.clientY, x: element.x || 0, y: element.y || 0 };
+          event.stopPropagation();
+
+          const resizeHandle = event.target.closest('[data-thumb3-resize]');
+          if (resizeHandle) {
+            const rect = target.getBoundingClientRect();
+            const centerX = rect.left + rect.width / 2;
+            const centerY = rect.top + rect.height / 2;
+            const startDistance = Math.max(24, Math.hypot(event.clientX - centerX, event.clientY - centerY));
+            thumb3Drag = {
+              type: 'resize',
+              id,
+              handle: resizeHandle.dataset.thumb3Resize,
+              startX: event.clientX,
+              startY: event.clientY,
+              centerX,
+              centerY,
+              startDistance,
+              scale: Number(element.scale || 1)
+            };
+          } else {
+            thumb3Drag = {
+              type: 'move',
+              id,
+              startX: event.clientX,
+              startY: event.clientY,
+              x: Number(element.x || 0),
+              y: Number(element.y || 0)
+            };
+          }
           target.setPointerCapture?.(event.pointerId);
         });
+
         window.addEventListener('pointermove', event => {
           if (!thumb3Drag) return;
           const element = thumb3State.elements.find(item => item.id === thumb3Drag.id);
           if (!element) return;
-          element.x = Math.max(-620, Math.min(620, thumb3Drag.x + (event.clientX - thumb3Drag.startX)));
-          element.y = Math.max(-340, Math.min(340, thumb3Drag.y + (event.clientY - thumb3Drag.startY)));
+
+          if (thumb3Drag.type === 'resize') {
+            const nextDistance = Math.max(12, Math.hypot(event.clientX - thumb3Drag.centerX, event.clientY - thumb3Drag.centerY));
+            const ratio = nextDistance / thumb3Drag.startDistance;
+            element.scale = Math.max(0.1, Math.min(4, thumb3Drag.scale * ratio));
+          } else {
+            element.x = Math.max(-620, Math.min(620, thumb3Drag.x + (event.clientX - thumb3Drag.startX)));
+            element.y = Math.max(-340, Math.min(340, thumb3Drag.y + (event.clientY - thumb3Drag.startY)));
+          }
+
           renderThumb3();
           syncThumb3Controls();
         });
+
         window.addEventListener('pointerup', () => { thumb3Drag = null; });
         thumb3Canvas?.addEventListener('click', event => {
           const target = event.target.closest('.thumb3-element');

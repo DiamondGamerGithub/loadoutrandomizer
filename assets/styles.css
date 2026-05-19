@@ -6752,3 +6752,66 @@ body.thumbnail-page.thumb3-template-active .thumb3-template {
 .rt-fullscreen-clone-stage .thumb3-element {
   cursor: default !important;
 }
+
+
+/* v100 Custom Thumbnail elements + corner scaling fix */
+.thumb3-element {
+  pointer-events: auto !important;
+  touch-action: none;
+}
+
+.thumb3-resize-handle {
+  position: absolute;
+  z-index: 25;
+  width: 17px;
+  height: 17px;
+  border-radius: 6px;
+  background: #57d7ff;
+  border: 2px solid #06111f;
+  box-shadow: 0 0 0 2px rgba(255,255,255,0.85), 0 6px 16px rgba(0,0,0,0.34);
+  display: none;
+  pointer-events: auto;
+}
+
+.thumb3-element.is-selected .thumb3-resize-handle {
+  display: block;
+}
+
+.thumb3-resize-nw {
+  left: -12px;
+  top: -12px;
+  cursor: nwse-resize;
+}
+
+.thumb3-resize-ne {
+  right: -12px;
+  top: -12px;
+  cursor: nesw-resize;
+}
+
+.thumb3-resize-sw {
+  left: -12px;
+  bottom: -12px;
+  cursor: nesw-resize;
+}
+
+.thumb3-resize-se {
+  right: -12px;
+  bottom: -12px;
+  cursor: nwse-resize;
+}
+
+.rt-fullscreen-clone-stage .thumb3-resize-handle,
+.rt-fullscreen-clone-stage .thumb3-add-fab,
+.rt-fullscreen-clone-stage .thumb3-add-menu {
+  display: none !important;
+}
+
+.thumb3-add-menu.open:not([hidden]) {
+  pointer-events: auto !important;
+}
+
+.thumb3-add-modal-card,
+.thumb3-add-modal-card * {
+  pointer-events: auto !important;
+}
