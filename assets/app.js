@@ -5462,7 +5462,16 @@ thumbClearBtn?.addEventListener("click", () => {
     })();
 
 
-    (function setupCursorBubble(){
+    
+(function(){
+  window.__rtStableFullscreenRefresh = true;
+  document.addEventListener("fullscreenchange", () => {
+    setTimeout(() => window.dispatchEvent(new Event("resize")), 60);
+    setTimeout(() => window.dispatchEvent(new Event("resize")), 220);
+  });
+})();
+
+(function setupCursorBubble(){
       try {
         const toggleBtn = document.getElementById('cursorBubbleToggle');
         const applyCursorToggleState = () => {

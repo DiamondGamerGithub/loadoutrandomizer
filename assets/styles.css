@@ -5911,3 +5911,141 @@ body.home-page #homePage .home-card-image-wrap,
 .challenge-icon {
   object-fit: contain !important;
 }
+
+
+/* v94 stable fullscreen sizing fix
+   Keeps Loadout Screen and Thumbnail 2 at a fixed 16:9 stage so text/backgrounds do not shift or crop. */
+.screen-stage,
+.thumb2-stage,
+.thumb-stage {
+  container-type: inline-size;
+}
+
+.screen-loadout-title {
+  font-size: clamp(38px, 7.2cqw, 96px) !important;
+}
+
+.thumb2-title {
+  font-size: clamp(42px, 6.3cqw, 96px) !important;
+}
+
+.thumb2-arrow {
+  width: clamp(130px, 22cqw, 250px) !important;
+  height: clamp(130px, 22cqw, 250px) !important;
+}
+
+.thumb2-slot-row {
+  gap: clamp(12px, 1.5cqw, 20px) !important;
+}
+
+.screen-stage:fullscreen,
+.thumb2-stage:fullscreen,
+.thumb-stage:fullscreen {
+  width: min(100vw, calc(100vh * 16 / 9)) !important;
+  height: min(100vh, calc(100vw * 9 / 16)) !important;
+  aspect-ratio: 16 / 9 !important;
+  max-width: none !important;
+  max-height: none !important;
+  position: fixed !important;
+  inset: 0 !important;
+  margin: auto !important;
+  border-radius: 0 !important;
+  padding: 0 !important;
+  transform: none !important;
+  overflow: hidden !important;
+  background: #050812 !important;
+}
+
+.screen-stage:fullscreen::backdrop,
+.thumb2-stage:fullscreen::backdrop,
+.thumb-stage:fullscreen::backdrop {
+  background: #050812 !important;
+}
+
+.screen-stage:fullscreen .screen-bg-image,
+.thumb2-stage:fullscreen .thumb2-bg-img,
+.thumb-stage:fullscreen .thumb-bg-img {
+  object-fit: cover !important;
+}
+
+.screen-stage:fullscreen .screen-bg-image {
+  width: 100% !important;
+  height: 100% !important;
+  transform: scale(var(--screen-zoom, 1)) !important;
+  transform-origin: center center !important;
+}
+
+.screen-stage:fullscreen .screen-slot-row {
+  left: 50% !important;
+  top: 50% !important;
+  width: 92% !important;
+  gap: 2.2% !important;
+  transform:
+    translate(-50%, -50%)
+    translate(var(--screen-slots-x, 0px), var(--screen-slots-y, 0px))
+    scale(var(--screen-slots-scale, 1)) !important;
+}
+
+.screen-stage:fullscreen .screen-loadout-title {
+  top: 4.2% !important;
+  left: 50% !important;
+  transform:
+    translate(calc(-50% + var(--screen-title-x, 0px)), var(--screen-title-y, 0px))
+    scale(var(--screen-title-scale, 1)) !important;
+  transform-origin: center top !important;
+}
+
+.screen-stage:fullscreen .screen-plus {
+  width: 52px !important;
+  height: 52px !important;
+  font-size: 34px !important;
+}
+
+.thumb2-stage:fullscreen .thumb2-canvas {
+  position: absolute !important;
+  inset: 0 !important;
+  width: 100% !important;
+  height: 100% !important;
+  aspect-ratio: 16 / 9 !important;
+  border-radius: 0 !important;
+  overflow: hidden !important;
+  transform: none !important;
+}
+
+.thumb2-stage:fullscreen .thumb2-bg-img {
+  inset: -6% !important;
+  width: 112% !important;
+  height: 112% !important;
+  transform: scale(var(--thumb2-bg-zoom, 1)) !important;
+  transform-origin: center center !important;
+}
+
+.thumb2-stage:fullscreen .thumb2-title {
+  right: calc(4.2% + var(--thumb2-title-x)) !important;
+  top: calc(3.2% + var(--thumb2-title-y)) !important;
+  transform: scale(var(--thumb2-title-scale)) !important;
+  transform-origin: top right !important;
+}
+
+.thumb2-stage:fullscreen .thumb2-slot-row {
+  left: 50% !important;
+  bottom: 5.5% !important;
+  width: min(89%, 1060px) !important;
+  transform: translateX(-50%) !important;
+  grid-template-columns: repeat(4, 1fr) !important;
+}
+
+.thumb2-stage:fullscreen .thumb2-slot {
+  aspect-ratio: 1 / 0.94 !important;
+}
+
+.thumb-stage:fullscreen .thumb-canvas {
+  position: absolute !important;
+  inset: 0 !important;
+  width: 100% !important;
+  height: 100% !important;
+  aspect-ratio: 16 / 9 !important;
+  border-radius: 0 !important;
+  max-height: none !important;
+  transform: none !important;
+}
