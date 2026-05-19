@@ -4144,12 +4144,32 @@ thumbClearBtn?.addEventListener("click", () => {
                 <label class="thumb-mini-control"><span>Opacity</span><input id="thumb3Opacity" type="range" min="0" max="1" value="1" step="0.01" /></label>
                 <label class="thumb-mini-control"><span>Brightness</span><input id="thumb3Brightness" type="range" min="0" max="2.5" value="1" step="0.01" /></label>
                 <div class="thumb3-weapon-controls" id="thumb3WeaponControls" hidden>
-                  <label class="thumb-mini-control"><span>Weapon</span><select id="thumb3WeaponSelect"></select></label>
+                  <label class="thumb-mini-control"><span>Weapon</span><input id="thumb3WeaponDisplay" type="text" readonly value="" /></label>
+                  <button class="mini-btn" type="button" id="thumb3ChooseWeaponBtn">Choose Weapon / Skin</button>
+                </div>
+                <div class="thumb3-square-controls" id="thumb3SquareControls" hidden>
+                  <label class="thumb-mini-control"><span>Box Color</span>
+                    <select id="thumb3SquareColor">
+                      <option value="grey">Grey</option>
+                      <option value="green">Green</option>
+                      <option value="blue">Blue</option>
+                      <option value="pink">Pink</option>
+                      <option value="red">Red</option>
+                      <option value="yellow">Yellow</option>
+                      <option value="purple">Purple</option>
+                    </select>
+                  </label>
+                  <label class="thumb-check"><input id="thumb3SquareGlow" type="checkbox" /> Enable Glow</label>
                 </div>
                 <div class="thumb3-text-controls" id="thumb3TextControls" hidden>
                   <label class="thumb-mini-control"><span>Text</span><input id="thumb3TextValue" type="text" value="TEXT" maxlength="42" /></label>
                   <label class="thumb-mini-control"><span>Text Color</span><input id="thumb3TextColor" type="color" value="#ffffff" /></label>
                   <label class="thumb-mini-control"><span>Font Size</span><input id="thumb3FontSize" type="range" min="16" max="240" value="108" step="1" /></label>
+                  <div class="thumb3-font-row">
+                    <button class="mini-btn thumb3-font-btn" type="button" data-thumb3-font="font1">Font 1</button>
+                    <button class="mini-btn thumb3-font-btn" type="button" data-thumb3-font="font2">Font 2</button>
+                    <button class="mini-btn" type="button" id="thumb3UploadFontBtn">Upload Font</button>
+                  </div>
                   <label class="thumb-check"><input id="thumb3StrokeEnabled" type="checkbox" checked /> Enable text stroke</label>
                   <label class="thumb-mini-control"><span>Stroke Color</span><input id="thumb3StrokeColor" type="color" value="#000000" /></label>
                   <label class="thumb-mini-control"><span>Stroke Size</span><input id="thumb3StrokeSize" type="range" min="0" max="20" value="8" step="0.25" /></label>
@@ -4163,6 +4183,10 @@ thumbClearBtn?.addEventListener("click", () => {
                 <div class="thumb3-image-controls" id="thumb3ImageControls" hidden>
                   <button class="mini-btn" type="button" id="thumb3ReplaceImageBtn">Replace Image</button>
                 </div>
+                <div class="thumb3-order-row">
+                  <button class="mini-btn" type="button" id="thumb3BringForwardBtn">Bring Forward</button>
+                  <button class="mini-btn" type="button" id="thumb3SendBackwardBtn">Send Back</button>
+                </div>
                 <button class="mini-btn" type="button" id="thumb3RemoveSelectedBtn">Remove Selected Element</button>
               </div>
             </div>
@@ -4170,6 +4194,19 @@ thumbClearBtn?.addEventListener("click", () => {
 
           <input id="thumb3ImageInput" type="file" accept="image/*" hidden />
           <input id="thumb3BgInput" type="file" accept="image/*" hidden />
+          <input id="thumb3FontInput" type="file" accept=".ttf,.otf,.woff,.woff2,font/*" hidden />
+          <div class="screen-picker-backdrop" id="thumb3WeaponPicker" aria-hidden="true">
+            <div class="screen-picker-modal">
+              <div class="screen-picker-head">
+                <div>
+                  <h3 id="thumb3PickerTitle">Choose a Weapon</h3>
+                  <p id="thumb3PickerSubtext">Pick a weapon, then choose a skin or upload your own image.</p>
+                </div>
+                <button class="screen-picker-close" id="thumb3PickerClose" type="button" aria-label="Close weapon picker">×</button>
+              </div>
+              <div class="screen-picker-list" id="thumb3PickerList"></div>
+            </div>
+          </div>
         `;
         thumb3InsertAfter?.after(thumb3Template);
 
@@ -4201,11 +4238,17 @@ thumbClearBtn?.addEventListener("click", () => {
         const thumb3Opacity = thumb3Template.querySelector('#thumb3Opacity');
         const thumb3Brightness = thumb3Template.querySelector('#thumb3Brightness');
         const thumb3WeaponControls = thumb3Template.querySelector('#thumb3WeaponControls');
-        const thumb3WeaponSelect = thumb3Template.querySelector('#thumb3WeaponSelect');
+        const thumb3WeaponDisplay = thumb3Template.querySelector('#thumb3WeaponDisplay');
+        const thumb3ChooseWeaponBtn = thumb3Template.querySelector('#thumb3ChooseWeaponBtn');
+        const thumb3SquareControls = thumb3Template.querySelector('#thumb3SquareControls');
+        const thumb3SquareColor = thumb3Template.querySelector('#thumb3SquareColor');
+        const thumb3SquareGlow = thumb3Template.querySelector('#thumb3SquareGlow');
         const thumb3TextControls = thumb3Template.querySelector('#thumb3TextControls');
         const thumb3TextValue = thumb3Template.querySelector('#thumb3TextValue');
         const thumb3TextColor = thumb3Template.querySelector('#thumb3TextColor');
         const thumb3FontSize = thumb3Template.querySelector('#thumb3FontSize');
+        const thumb3FontButtons = Array.from(thumb3Template.querySelectorAll('[data-thumb3-font]'));
+        const thumb3UploadFontBtn = thumb3Template.querySelector('#thumb3UploadFontBtn');
         const thumb3StrokeEnabled = thumb3Template.querySelector('#thumb3StrokeEnabled');
         const thumb3StrokeColor = thumb3Template.querySelector('#thumb3StrokeColor');
         const thumb3StrokeSize = thumb3Template.querySelector('#thumb3StrokeSize');
@@ -4217,25 +4260,49 @@ thumbClearBtn?.addEventListener("click", () => {
         const thumb3ShadowY = thumb3Template.querySelector('#thumb3ShadowY');
         const thumb3ImageControls = thumb3Template.querySelector('#thumb3ImageControls');
         const thumb3ReplaceImageBtn = thumb3Template.querySelector('#thumb3ReplaceImageBtn');
+        const thumb3BringForwardBtn = thumb3Template.querySelector('#thumb3BringForwardBtn');
+        const thumb3SendBackwardBtn = thumb3Template.querySelector('#thumb3SendBackwardBtn');
         const thumb3RemoveSelectedBtn = thumb3Template.querySelector('#thumb3RemoveSelectedBtn');
+        const thumb3FontInput = thumb3Template.querySelector('#thumb3FontInput');
+        const thumb3WeaponPicker = thumb3Template.querySelector('#thumb3WeaponPicker');
+        const thumb3PickerTitle = thumb3Template.querySelector('#thumb3PickerTitle');
+        const thumb3PickerSubtext = thumb3Template.querySelector('#thumb3PickerSubtext');
+        const thumb3PickerClose = thumb3Template.querySelector('#thumb3PickerClose');
+        const thumb3PickerList = thumb3Template.querySelector('#thumb3PickerList');
 
         const thumb3State = {
           bgSrc: screenBackgrounds.grid,
           elements: [],
           selectedId: null,
           pendingUpload: null,
+          pickerElementId: null,
+          activeSkinWeapon: null,
           nextId: 1,
           global: { brightness: 1, saturation: 1, hue: 0, darkness: 0 }
         };
         const thumb3GetWeapon = name => allWeapons.find(w => w.name === name);
         const defaultThumb3Weapon = () => thumb3GetWeapon('Assault Rifle') || thumb3GetWeapon('Handgun') || allWeapons[0] || { name:'Weapon', category:'Weapon', img: placeholderSvg('Weapon', 'Weapon') };
         const createThumb3Id = () => `thumb3_${thumb3State.nextId++}`;
-        const thumb3WeaponOptionsHtml = () => allWeapons.map(w => `<option value="${escapeHtml(w.name)}">${escapeHtml(w.name)}</option>`).join('');
-        thumb3WeaponSelect.innerHTML = thumb3WeaponOptionsHtml();
+        const thumb3ColorChoices = ['grey','green','blue','pink','red','yellow','purple'];
+        const thumb3SquareColorLabel = value => {
+          const text = String(value || 'grey');
+          return text.charAt(0).toUpperCase() + text.slice(1);
+        };
+        const thumb3TextFontFamily = element => {
+          const choice = element?.fontChoice || 'font1';
+          if (choice === 'font2') return '"Bungee", "Arial Black", Impact, sans-serif';
+          if (choice === 'custom') return '"RivalsToolsThumb3CustomFont", "Rubik", Impact, system-ui, sans-serif';
+          return '"Rubik", Arial, sans-serif';
+        };
+        const thumb3ElementImageSrc = element => {
+          if (element?.src) return element.src;
+          if (element?.skinFile) return skinFileUrl(element.skinFile);
+          return element?.weaponImg || placeholderSvg(element?.weaponName || 'Weapon', 'Weapon');
+        };
 
         const createThumb3Element = (type, extra = {}) => {
           const baseWeapon = extra.weapon || defaultThumb3Weapon();
-          const weaponImg = baseWeapon.skinFile ? '' : (baseWeapon.img || placeholderSvg(baseWeapon.name, baseWeapon.category));
+          const weaponImg = baseWeapon.skinFile ? skinFileUrl(baseWeapon.skinFile) : (baseWeapon.img || placeholderSvg(baseWeapon.name, baseWeapon.category));
           return Object.assign({
             id: createThumb3Id(),
             type,
@@ -4251,6 +4318,7 @@ thumbClearBtn?.addEventListener("click", () => {
             text: 'TEXT',
             color: '#ffffff',
             fontSize: 108,
+            fontChoice: 'font1',
             strokeEnabled: true,
             strokeColor: '#000000',
             strokeSize: 8,
@@ -4264,7 +4332,12 @@ thumbClearBtn?.addEventListener("click", () => {
             weaponName: baseWeapon.name,
             weaponImg,
             label: baseWeapon.name,
-            showLabel: type !== 'weapon'
+            showLabel: type !== 'weapon',
+            boxColor: 'grey',
+            boxGlow: false,
+            skinFile: baseWeapon.skinFile || '',
+            baseWeapon: baseWeapon.baseWeapon || baseWeapon.name,
+            skinName: baseWeapon.skinName || ''
           }, extra);
         };
 
@@ -4312,6 +4385,9 @@ thumbClearBtn?.addEventListener("click", () => {
             text.textContent = element.text || 'TEXT';
             text.style.color = element.color || '#ffffff';
             text.style.fontSize = `${element.fontSize || 108}px`;
+            text.style.fontFamily = thumb3TextFontFamily(element);
+            text.style.fontWeight = element.fontChoice === 'font1' ? '900' : '900';
+            text.style.letterSpacing = element.fontChoice === 'font1' ? '-0.03em' : '1px';
             text.style.webkitTextStroke = element.strokeEnabled ? `${element.strokeSize || 0}px ${element.strokeColor || '#000000'}` : '0 transparent';
             text.style.textShadow = element.shadowEnabled ? `${element.shadowX || 0}px ${element.shadowY || 0}px ${element.shadowBlur || 0}px rgba(${parseInt((element.shadowColor || '#000000').slice(1,3),16)},${parseInt((element.shadowColor || '#000000').slice(3,5),16)},${parseInt((element.shadowColor || '#000000').slice(5,7),16)},${Number(element.shadowOpacity || 0)})` : 'none';
             wrapper.appendChild(text);
@@ -4322,7 +4398,7 @@ thumbClearBtn?.addEventListener("click", () => {
           if (element.type === 'weapon') {
             const img = document.createElement('img');
             img.className = 'thumb3-weapon-standalone';
-            img.src = element.src || element.weaponImg || placeholderSvg(element.weaponName || 'Weapon', 'Weapon');
+            img.src = thumb3ElementImageSrc(element);
             img.alt = element.weaponName || 'Weapon';
             img.draggable = false;
             wrapper.appendChild(img);
@@ -4343,6 +4419,10 @@ thumbClearBtn?.addEventListener("click", () => {
 
           const slotBg = document.createElement('div');
           slotBg.className = `thumb3-slot-shell ${element.type === 'squareSlot' ? 'square' : 'wide'}`;
+          if (element.type === 'squareSlot') {
+            slotBg.dataset.color = element.boxColor || 'grey';
+            slotBg.dataset.glow = element.boxGlow ? 'on' : 'off';
+          }
           if (element.type === 'weaponSlot') {
             const slotBgImg = document.createElement('img');
             slotBgImg.className = 'thumb3-slot-bg';
@@ -4353,14 +4433,14 @@ thumbClearBtn?.addEventListener("click", () => {
           }
           const weaponImg = document.createElement('img');
           weaponImg.className = 'thumb3-slot-weapon';
-          weaponImg.src = element.src || element.weaponImg || placeholderSvg(element.weaponName || 'Weapon', 'Weapon');
+          weaponImg.src = thumb3ElementImageSrc(element);
           weaponImg.alt = element.weaponName || 'Weapon';
           weaponImg.draggable = false;
           slotBg.appendChild(weaponImg);
           if (element.showLabel !== false) {
             const label = document.createElement('div');
             label.className = 'thumb3-slot-label';
-            label.textContent = element.label || element.weaponName || 'Weapon';
+            label.textContent = element.label || element.skinName || element.weaponName || 'Weapon';
             slotBg.appendChild(label);
           }
           wrapper.appendChild(slotBg);
@@ -4382,10 +4462,12 @@ thumbClearBtn?.addEventListener("click", () => {
           const isText = element?.type === 'text';
           const isWeaponType = ['weapon', 'weaponSlot', 'squareSlot'].includes(element?.type);
           const isImageLike = ['image', 'weapon', 'weaponSlot', 'squareSlot'].includes(element?.type);
+          const isSquare = element?.type === 'squareSlot';
           thumb3NoSelection.hidden = Boolean(element);
           thumb3SelectedControls.hidden = !element;
           thumb3TextControls.hidden = !isText;
           thumb3WeaponControls.hidden = !isWeaponType;
+          thumb3SquareControls.hidden = !isSquare;
           thumb3ImageControls.hidden = !isImageLike;
           if (!element) return;
           thumb3SelectedType.value = element.type;
@@ -4396,7 +4478,14 @@ thumbClearBtn?.addEventListener("click", () => {
           thumb3StretchY.value = String(element.stretchY || 1);
           thumb3Opacity.value = String(element.opacity ?? 1);
           thumb3Brightness.value = String(element.brightness || 1);
-          if (isWeaponType) thumb3WeaponSelect.value = element.weaponName || defaultThumb3Weapon().name;
+          if (isWeaponType && thumb3WeaponDisplay) {
+            const display = element.skinName ? `${element.weaponName} — ${element.skinName}` : (element.label || element.weaponName || defaultThumb3Weapon().name);
+            thumb3WeaponDisplay.value = display;
+          }
+          if (isSquare) {
+            thumb3SquareColor.value = element.boxColor || 'grey';
+            thumb3SquareGlow.checked = Boolean(element.boxGlow);
+          }
           if (isText) {
             thumb3TextValue.value = element.text || 'TEXT';
             thumb3TextColor.value = element.color || '#ffffff';
@@ -4410,6 +4499,9 @@ thumbClearBtn?.addEventListener("click", () => {
             thumb3ShadowBlur.value = String(element.shadowBlur || 0);
             thumb3ShadowX.value = String(element.shadowX || 0);
             thumb3ShadowY.value = String(element.shadowY || 10);
+            thumb3FontButtons.forEach(btn => btn.classList.toggle('active', btn.dataset.thumb3Font === (element.fontChoice || 'font1')));
+          } else {
+            thumb3FontButtons.forEach(btn => btn.classList.remove('active'));
           }
         };
 
@@ -4427,12 +4519,124 @@ thumbClearBtn?.addEventListener("click", () => {
           renderThumb3();
         };
 
-        const setThumb3Weapon = (element, weaponName) => {
-          const weapon = thumb3GetWeapon(weaponName) || allWeapons.find(w => w.name === weaponName) || defaultThumb3Weapon();
+        const setThumb3Weapon = (element, weaponOrName, options = {}) => {
+          const weapon = typeof weaponOrName === 'string'
+            ? (thumb3GetWeapon(weaponOrName) || allWeapons.find(w => w.name === weaponOrName) || defaultThumb3Weapon())
+            : (weaponOrName || defaultThumb3Weapon());
           element.weaponName = weapon.name;
-          element.weaponImg = weapon.img || placeholderSvg(weapon.name, weapon.category);
-          element.src = weapon.img || placeholderSvg(weapon.name, weapon.category);
-          element.label = weapon.name;
+          element.baseWeapon = weapon.baseWeapon || weapon.name;
+          element.skinName = options.skinName || weapon.skinName || '';
+          element.skinFile = options.skinFile || weapon.skinFile || '';
+          const resolvedSrc = options.src || (element.skinFile ? skinFileUrl(element.skinFile) : (weapon.img || placeholderSvg(weapon.name, weapon.category)));
+          element.weaponImg = weapon.img || resolvedSrc || placeholderSvg(weapon.name, weapon.category);
+          element.src = resolvedSrc;
+          element.label = options.label || element.skinName || weapon.name;
+        };
+
+        const moveThumb3Selected = direction => {
+          const id = thumb3State.selectedId;
+          const index = thumb3State.elements.findIndex(item => item.id === id);
+          if (index === -1) return;
+          const nextIndex = direction > 0 ? Math.min(thumb3State.elements.length - 1, index + 1) : Math.max(0, index - 1);
+          if (nextIndex === index) return;
+          const [item] = thumb3State.elements.splice(index, 1);
+          thumb3State.elements.splice(nextIndex, 0, item);
+          renderThumb3();
+          syncThumb3Controls();
+        };
+
+        const getThumb3PickerElement = () => thumb3State.elements.find(item => item.id === thumb3State.pickerElementId) || getThumb3Selected();
+        const openThumb3WeaponPicker = elementId => {
+          thumb3State.pickerElementId = elementId || thumb3State.selectedId;
+          if (!thumb3State.pickerElementId) return;
+          thumb3State.activeSkinWeapon = null;
+          renderThumb3WeaponPicker();
+          thumb3WeaponPicker?.classList.add('open');
+          thumb3WeaponPicker?.setAttribute('aria-hidden', 'false');
+        };
+        const closeThumb3WeaponPicker = () => {
+          thumb3WeaponPicker?.classList.remove('open');
+          thumb3WeaponPicker?.setAttribute('aria-hidden', 'true');
+        };
+        const renderThumb3WeaponPicker = () => {
+          thumb3State.activeSkinWeapon = null;
+          if (thumb3PickerTitle) thumb3PickerTitle.textContent = 'Choose a Weapon';
+          if (thumb3PickerSubtext) thumb3PickerSubtext.textContent = 'Pick a weapon, then choose a skin or upload your own render.';
+          thumb3PickerList.innerHTML = `
+            <div class="screen-picker-actions">
+              <button class="screen-picker-custom" type="button" data-thumb3-custom-upload="true">
+                Upload Custom Image
+                <small>Use your own weapon render or modeled image</small>
+              </button>
+            </div>
+            ${slots.map(category => {
+              const categoryWeapons = weaponsBySlot[category] || [];
+              return `
+                <div class="screen-picker-category">
+                  <strong>${escapeHtml(category)}</strong>
+                  <div class="screen-picker-grid">
+                    ${categoryWeapons.map(weapon => `
+                      <button class="screen-picker-weapon" type="button" data-thumb3-weapon="${escapeHtml(weapon.name)}">
+                        <img decoding="async" loading="lazy" src="${weapon.img || placeholderSvg(weapon.name, weapon.category)}" alt="" draggable="false" />
+                        <span>${escapeHtml(weapon.name)}</span>
+                        <small>${escapeHtml(weapon.tier)}</small>
+                      </button>
+                    `).join('')}
+                  </div>
+                </div>
+              `;
+            }).join('')}
+          `;
+        };
+        const renderThumb3SkinPicker = async weapon => {
+          thumb3State.activeSkinWeapon = weapon;
+          if (thumb3PickerTitle) thumb3PickerTitle.textContent = `${weapon.name} Skins`;
+          if (thumb3PickerSubtext) thumb3PickerSubtext.textContent = 'Choose Default, upload your own image, or pick an embedded skin.';
+          thumb3PickerList.innerHTML = `
+            <button class="screen-picker-back" type="button" data-thumb3-back-weapons="true">← Back to Weapons</button>
+            <div class="screen-picker-actions">
+              <button class="screen-picker-custom" type="button" data-thumb3-default-skin="true">
+                Default
+                <small>Use the normal ${escapeHtml(weapon.name)} image</small>
+              </button>
+              <button class="screen-picker-custom" type="button" data-thumb3-custom-upload="true">
+                Upload Custom Image
+                <small>Use your own skin/render</small>
+              </button>
+            </div>
+            <div class="screen-picker-message">Loading embedded skins...</div>
+          `;
+          const data = await loadSkinData();
+          const skins = data.get(weapon.name) || [];
+          const skinsHtml = skins.length
+            ? `<div class="screen-picker-category">
+                <strong>${escapeHtml(weapon.name)} Skins</strong>
+                <div class="screen-picker-grid">
+                  ${skins.map((skin, index) => `
+                    <button class="screen-picker-skin" type="button" data-thumb3-skin-index="${index}" data-thumb3-skin-file="${escapeHtml(skin.file || '')}">
+                      <img decoding="async" loading="lazy" src="${skin.file ? skinFileUrl(skin.file) : (weapon.img || placeholderSvg(weapon.name, weapon.category))}" alt="" draggable="false" />
+                      <span>${escapeHtml(skin.name)}</span>
+                      <small>${escapeHtml(skin.rarity || 'Skin')}</small>
+                    </button>
+                  `).join('')}
+                </div>
+              </div>`
+            : `<div class="screen-picker-message">No embedded skins were found for ${escapeHtml(weapon.name)}. You can still use Default or upload a custom image.</div>`;
+          thumb3PickerList.innerHTML = `
+            <button class="screen-picker-back" type="button" data-thumb3-back-weapons="true">← Back to Weapons</button>
+            <div class="screen-picker-actions">
+              <button class="screen-picker-custom" type="button" data-thumb3-default-skin="true">
+                Default
+                <small>Use the normal ${escapeHtml(weapon.name)} image</small>
+              </button>
+              <button class="screen-picker-custom" type="button" data-thumb3-custom-upload="true">
+                Upload Custom Image
+                <small>Use your own skin/render</small>
+              </button>
+            </div>
+            ${skinsHtml}
+          `;
+          hydrateSkinFallbackImages(thumb3PickerList, weapon.img || placeholderSvg(weapon.name, weapon.category));
         };
 
         const thumb3AddByType = type => {
@@ -4450,19 +4654,25 @@ thumbClearBtn?.addEventListener("click", () => {
             return;
           }
           if (type === 'text') {
-            addThumb3Element(createThumb3Element('text', { text: 'TEXT', width: 760, height: 180 }));
+            addThumb3Element(createThumb3Element('text', { text: 'TEXT', width: 760, height: 180, fontChoice: 'font1' }));
             return;
           }
           if (type === 'weapon') {
-            addThumb3Element(createThumb3Element('weapon', { weaponName: weapon.name, weaponImg: weapon.img || placeholderSvg(weapon.name, weapon.category), src: weapon.img || placeholderSvg(weapon.name, weapon.category), width: 340, height: 240 }));
+            const element = createThumb3Element('weapon', { weaponName: weapon.name, weaponImg: weapon.img || placeholderSvg(weapon.name, weapon.category), src: weapon.img || placeholderSvg(weapon.name, weapon.category), width: 340, height: 240 });
+            addThumb3Element(element);
+            openThumb3WeaponPicker(element.id);
             return;
           }
           if (type === 'weaponSlot') {
-            addThumb3Element(createThumb3Element('weaponSlot', { weaponName: weapon.name, weaponImg: weapon.img || placeholderSvg(weapon.name, weapon.category), src: weapon.img || placeholderSvg(weapon.name, weapon.category), width: 310, height: 220 }));
+            const element = createThumb3Element('weaponSlot', { weaponName: weapon.name, weaponImg: weapon.img || placeholderSvg(weapon.name, weapon.category), src: weapon.img || placeholderSvg(weapon.name, weapon.category), width: 310, height: 220 });
+            addThumb3Element(element);
+            openThumb3WeaponPicker(element.id);
             return;
           }
           if (type === 'squareSlot') {
-            addThumb3Element(createThumb3Element('squareSlot', { weaponName: weapon.name, weaponImg: weapon.img || placeholderSvg(weapon.name, weapon.category), src: weapon.img || placeholderSvg(weapon.name, weapon.category), width: 270, height: 270 }));
+            const element = createThumb3Element('squareSlot', { weaponName: weapon.name, weaponImg: weapon.img || placeholderSvg(weapon.name, weapon.category), src: weapon.img || placeholderSvg(weapon.name, weapon.category), width: 270, height: 270, boxColor: 'grey', boxGlow: false });
+            addThumb3Element(element);
+            openThumb3WeaponPicker(element.id);
             return;
           }
         };
@@ -4551,6 +4761,7 @@ thumbClearBtn?.addEventListener("click", () => {
 
         document.addEventListener('keydown', event => {
           if (event.key === 'Escape' && thumb3AddMenu && !thumb3AddMenu.hidden) closeThumb3AddModal();
+          if (event.key === 'Escape' && thumb3WeaponPicker?.classList.contains('open')) closeThumb3WeaponPicker();
         });
         thumb3ImageInput?.addEventListener('change', async () => {
           const file = thumb3ImageInput.files?.[0];
@@ -4560,8 +4771,20 @@ thumbClearBtn?.addEventListener("click", () => {
           if (thumb3State.pendingUpload === 'replace-selected' && selected && ['image', 'weapon', 'weaponSlot', 'squareSlot'].includes(selected.type)) {
             selected.src = src;
             selected.weaponImg = src;
+            selected.skinFile = '';
             renderThumb3();
             syncThumb3Controls();
+          } else if (thumb3State.pendingUpload === 'weapon-custom-for-selected' && selected && ['weapon', 'weaponSlot', 'squareSlot'].includes(selected.type)) {
+            const name = file.name ? file.name.replace(/\.[^.]+$/, '') : 'Custom Weapon';
+            selected.src = src;
+            selected.weaponImg = src;
+            selected.skinFile = '';
+            selected.skinName = '';
+            selected.weaponName = selected.weaponName || name;
+            selected.label = name || selected.weaponName;
+            renderThumb3();
+            syncThumb3Controls();
+            closeThumb3WeaponPicker();
           } else {
             addThumb3Element(createThumb3Element('image', { src, width: 320, height: 320 }));
           }
@@ -4573,6 +4796,23 @@ thumbClearBtn?.addEventListener("click", () => {
           thumb3State.bgSrc = await fileToDataUrl(file);
           renderThumb3();
           thumb3State.pendingUpload = null;
+        });
+        thumb3UploadFontBtn?.addEventListener('click', () => {
+          thumb3FontInput.value = '';
+          thumb3FontInput.click();
+        });
+        thumb3FontInput?.addEventListener('change', async () => {
+          const file = thumb3FontInput.files?.[0];
+          if (!file) return;
+          const fontUrl = await fileToDataUrl(file);
+          let style = document.getElementById('thumb3CustomFontStyle');
+          if (!style) {
+            style = document.createElement('style');
+            style.id = 'thumb3CustomFontStyle';
+            document.head.appendChild(style);
+          }
+          style.textContent = `@font-face{font-family:"RivalsToolsThumb3CustomFont";src:url("${fontUrl}");font-weight:100 1000;font-style:normal;font-display:swap;}`;
+          updateThumb3Selected(item => item.fontChoice = 'custom');
         });
         thumb3FullscreenBtn?.addEventListener('click', () => window.openRivalsToolsStableFullscreen?.(thumb3Stage));
         thumb3DownloadBtn?.addEventListener('click', () => inlineSvgExport(thumb3Scene, `rivalstools-custom-thumbnail-${Date.now()}.png`));
@@ -4594,6 +4834,54 @@ thumbClearBtn?.addEventListener("click", () => {
           thumb3ImageInput.click();
         });
 
+        thumb3PickerClose?.addEventListener('click', closeThumb3WeaponPicker);
+        thumb3WeaponPicker?.addEventListener('click', event => {
+          if (event.target === thumb3WeaponPicker) closeThumb3WeaponPicker();
+        });
+        thumb3PickerList?.addEventListener('click', async event => {
+          const pickerElement = getThumb3PickerElement();
+          if (!pickerElement) return;
+          const backBtn = event.target.closest('[data-thumb3-back-weapons]');
+          if (backBtn) {
+            event.preventDefault();
+            renderThumb3WeaponPicker();
+            return;
+          }
+          const weaponBtn = event.target.closest('[data-thumb3-weapon]');
+          if (weaponBtn) {
+            event.preventDefault();
+            const weapon = thumb3GetWeapon(weaponBtn.dataset.thumb3Weapon) || defaultThumb3Weapon();
+            await renderThumb3SkinPicker(weapon);
+            return;
+          }
+          const defaultBtn = event.target.closest('[data-thumb3-default-skin]');
+          if (defaultBtn && thumb3State.activeSkinWeapon) {
+            event.preventDefault();
+            updateThumb3Selected(item => setThumb3Weapon(item, thumb3State.activeSkinWeapon, { label: thumb3State.activeSkinWeapon.name, skinFile: '', skinName: '', src: thumb3State.activeSkinWeapon.img || placeholderSvg(thumb3State.activeSkinWeapon.name, thumb3State.activeSkinWeapon.category) }));
+            closeThumb3WeaponPicker();
+            return;
+          }
+          const customBtn = event.target.closest('[data-thumb3-custom-upload]');
+          if (customBtn) {
+            event.preventDefault();
+            thumb3State.pendingUpload = 'weapon-custom-for-selected';
+            thumb3ImageInput.value = '';
+            closeThumb3WeaponPicker();
+            thumb3ImageInput.click();
+            return;
+          }
+          const skinBtn = event.target.closest('[data-thumb3-skin-index]');
+          if (skinBtn && thumb3State.activeSkinWeapon) {
+            event.preventDefault();
+            const data = await loadSkinData();
+            const skins = data.get(thumb3State.activeSkinWeapon.name) || [];
+            const skin = skins[Number(skinBtn.dataset.thumb3SkinIndex)];
+            if (!skin) return;
+            updateThumb3Selected(item => setThumb3Weapon(item, thumb3State.activeSkinWeapon, { label: skin.name || thumb3State.activeSkinWeapon.name, skinFile: skin.file || '', skinName: skin.name || '', src: skin.file ? skinFileUrl(skin.file) : (thumb3State.activeSkinWeapon.img || placeholderSvg(thumb3State.activeSkinWeapon.name, thumb3State.activeSkinWeapon.category)) }));
+            closeThumb3WeaponPicker();
+          }
+        });
+
         const bindThumb3Range = (el, fn) => el?.addEventListener('input', event => { showRangeTooltip(el, event); fn(); });
         [thumb3GlobalBrightness, thumb3GlobalSaturation, thumb3GlobalHue, thumb3GlobalDarkness].forEach(input => bindThumb3Range(input, applyThumb3Global));
         bindThumb3Range(thumb3PosX, () => updateThumb3Selected(item => item.x = Number(thumb3PosX.value) || 0));
@@ -4603,10 +4891,16 @@ thumbClearBtn?.addEventListener("click", () => {
         bindThumb3Range(thumb3StretchY, () => updateThumb3Selected(item => item.stretchY = Number(thumb3StretchY.value) || 1));
         bindThumb3Range(thumb3Opacity, () => updateThumb3Selected(item => item.opacity = Number(thumb3Opacity.value) || 0));
         bindThumb3Range(thumb3Brightness, () => updateThumb3Selected(item => item.brightness = Number(thumb3Brightness.value) || 1));
-        thumb3WeaponSelect?.addEventListener('change', () => updateThumb3Selected(item => setThumb3Weapon(item, thumb3WeaponSelect.value)));
+        thumb3ChooseWeaponBtn?.addEventListener('click', () => {
+          if (!getThumb3Selected()) return;
+          openThumb3WeaponPicker(thumb3State.selectedId);
+        });
+        thumb3SquareColor?.addEventListener('change', () => updateThumb3Selected(item => item.boxColor = thumb3SquareColor.value || 'grey'));
+        thumb3SquareGlow?.addEventListener('change', () => updateThumb3Selected(item => item.boxGlow = Boolean(thumb3SquareGlow.checked)));
         thumb3TextValue?.addEventListener('input', () => updateThumb3Selected(item => item.text = thumb3TextValue.value || 'TEXT'));
         thumb3TextColor?.addEventListener('input', () => updateThumb3Selected(item => item.color = thumb3TextColor.value || '#ffffff'));
         bindThumb3Range(thumb3FontSize, () => updateThumb3Selected(item => item.fontSize = Number(thumb3FontSize.value) || 108));
+        thumb3FontButtons.forEach(btn => btn.addEventListener('click', () => updateThumb3Selected(item => item.fontChoice = btn.dataset.thumb3Font || 'font1')));
         thumb3StrokeEnabled?.addEventListener('change', () => updateThumb3Selected(item => item.strokeEnabled = Boolean(thumb3StrokeEnabled.checked)));
         thumb3StrokeColor?.addEventListener('input', () => updateThumb3Selected(item => item.strokeColor = thumb3StrokeColor.value || '#000000'));
         bindThumb3Range(thumb3StrokeSize, () => updateThumb3Selected(item => item.strokeSize = Number(thumb3StrokeSize.value) || 0));
@@ -4616,6 +4910,8 @@ thumbClearBtn?.addEventListener("click", () => {
         bindThumb3Range(thumb3ShadowBlur, () => updateThumb3Selected(item => item.shadowBlur = Number(thumb3ShadowBlur.value) || 0));
         bindThumb3Range(thumb3ShadowX, () => updateThumb3Selected(item => item.shadowX = Number(thumb3ShadowX.value) || 0));
         bindThumb3Range(thumb3ShadowY, () => updateThumb3Selected(item => item.shadowY = Number(thumb3ShadowY.value) || 0));
+        thumb3BringForwardBtn?.addEventListener('click', () => moveThumb3Selected(1));
+        thumb3SendBackwardBtn?.addEventListener('click', () => moveThumb3Selected(-1));
 
         let thumb3Drag = null;
         thumb3ElementLayer?.addEventListener('pointerdown', event => {
@@ -4631,19 +4927,12 @@ thumbClearBtn?.addEventListener("click", () => {
 
           const resizeHandle = event.target.closest('[data-thumb3-resize]');
           if (resizeHandle) {
-            const rect = target.getBoundingClientRect();
-            const centerX = rect.left + rect.width / 2;
-            const centerY = rect.top + rect.height / 2;
-            const startDistance = Math.max(24, Math.hypot(event.clientX - centerX, event.clientY - centerY));
             thumb3Drag = {
               type: 'resize',
               id,
               handle: resizeHandle.dataset.thumb3Resize,
               startX: event.clientX,
               startY: event.clientY,
-              centerX,
-              centerY,
-              startDistance,
               scale: Number(element.scale || 1)
             };
           } else {
@@ -4665,9 +4954,11 @@ thumbClearBtn?.addEventListener("click", () => {
           if (!element) return;
 
           if (thumb3Drag.type === 'resize') {
-            const nextDistance = Math.max(12, Math.hypot(event.clientX - thumb3Drag.centerX, event.clientY - thumb3Drag.centerY));
-            const ratio = nextDistance / thumb3Drag.startDistance;
-            element.scale = Math.max(0.1, Math.min(4, thumb3Drag.scale * ratio));
+            const dx = event.clientX - thumb3Drag.startX;
+            const dy = event.clientY - thumb3Drag.startY;
+            const handle = thumb3Drag.handle || 'se';
+            const delta = handle === 'se' ? (dx + dy) : handle === 'nw' ? (-dx - dy) : handle === 'ne' ? (dx - dy) : (-dx + dy);
+            element.scale = Math.max(0.1, Math.min(4, thumb3Drag.scale + (delta / 220)));
           } else {
             element.x = Math.max(-620, Math.min(620, thumb3Drag.x + (event.clientX - thumb3Drag.startX)));
             element.y = Math.max(-340, Math.min(340, thumb3Drag.y + (event.clientY - thumb3Drag.startY)));
