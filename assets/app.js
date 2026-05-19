@@ -987,8 +987,14 @@ function setRngMode(value) {
 
       const setActivePage = page => {
         activePage = page === "screen" ? "screen" : page === "randomizer" ? "randomizer" : page === "thumbnail" ? "thumbnail" : page === "tier" ? "tier" : page === "challenge" ? "challenge" : page === "fusion" ? "fusion" : "home";
-        if (activePage !== "thumbnail") document.body.classList.remove('thumb2-template-active');
-        else if (typeof currentThumbnailTemplate !== 'undefined') document.body.classList.toggle('thumb2-template-active', currentThumbnailTemplate === '2');
+        if (activePage !== "thumbnail") {
+          document.body.classList.remove('thumb2-template-active');
+          document.body.classList.remove('thumb3-template-active');
+        } else {
+          const templateValue = document.getElementById('thumbnailBuilderPage')?.getAttribute('data-thumb-template') || '1';
+          document.body.classList.toggle('thumb2-template-active', templateValue === '2');
+          document.body.classList.toggle('thumb3-template-active', templateValue === '3');
+        }
         document.body.classList.toggle("home-page", activePage === "home");
         document.body.classList.toggle("screen-page", activePage === "screen");
         document.body.classList.toggle("thumbnail-page", activePage === "thumbnail");
@@ -3452,6 +3458,17 @@ thumbClearBtn?.addEventListener("click", () => {
         const thumbTemplateTabs = Array.from(document.querySelectorAll(".thumb-template-tab"));
         const thumbTemplate1Btn = document.getElementById("thumbTemplate1Btn");
         const thumbTemplate2Btn = document.getElementById("thumbTemplate2Btn");
+        let thumbTemplate3Btn = document.getElementById("thumbTemplate3Btn");
+        if (!thumbTemplate3Btn) {
+          thumbTemplate3Btn = document.createElement('button');
+          thumbTemplate3Btn.className = 'thumb-template-tab';
+          thumbTemplate3Btn.id = 'thumbTemplate3Btn';
+          thumbTemplate3Btn.type = 'button';
+          thumbTemplate3Btn.dataset.thumbTemplate = '3';
+          thumbTemplate3Btn.textContent = 'Custom Thumbnail';
+          thumbTemplate2Btn?.after(thumbTemplate3Btn);
+        }
+        if (!thumbTemplateTabs.includes(thumbTemplate3Btn)) thumbTemplateTabs.push(thumbTemplate3Btn);
         const thumb2Stage = document.getElementById("thumb2Stage");
         const thumb2Canvas = document.getElementById("thumb2Canvas");
         const thumb2BgImg = document.getElementById("thumb2BgImg");
@@ -3510,13 +3527,15 @@ thumbClearBtn?.addEventListener("click", () => {
         let thumb2PreviewTimer = null;
 
         const setThumbnailTemplate = value => {
-          currentThumbnailTemplate = value === '2' ? '2' : '1';
+          currentThumbnailTemplate = value === '2' ? '2' : value === '3' ? '3' : '1';
           if (thumbBuilderPageEl) thumbBuilderPageEl.setAttribute('data-thumb-template', currentThumbnailTemplate);
           document.body.classList.toggle('thumb2-template-active', currentThumbnailTemplate === '2');
+          document.body.classList.toggle('thumb3-template-active', currentThumbnailTemplate === '3');
           thumbTemplateTabs.forEach(btn => btn.classList.toggle('active', btn.dataset.thumbTemplate === currentThumbnailTemplate));
           setTimeout(() => {
             updateThumb2LayoutScale();
             if (currentThumbnailTemplate === '2') updateThumb2Preview();
+            if (currentThumbnailTemplate === '3') window.__rtThumb3Refresh?.();
           }, 60);
         };
 
@@ -4056,6 +4075,529 @@ thumbClearBtn?.addEventListener("click", () => {
             alert('Download failed because the browser blocked one of the images. Try running the site through localhost or GitHub Pages, and make sure the Weapons/Skins folders are uploaded beside the HTML.');
           }
         });
+
+
+
+        /* Custom Thumbnail */
+        const thumb3InsertAfter = thumbBuilderPageEl?.querySelector('.thumb-controls');
+        const thumb3Template = document.createElement('div');
+        thumb3Template.className = 'thumb3-template';
+        thumb3Template.innerHTML = `
+          <div class="thumb-stage-shell thumb3-stage-shell">
+            <div class="thumb3-stage" id="thumb3Stage">
+              <div class="thumb3-canvas" id="thumb3Canvas">
+                <div class="thumb3-scene" id="thumb3Scene">
+                  <img decoding="async" loading="lazy" class="thumb3-bg-img" id="thumb3BgImg" alt="" draggable="false" />
+                  <div class="thumb3-darkness" id="thumb3Darkness"></div>
+                  <div class="thumb3-element-layer" id="thumb3ElementLayer"></div>
+                </div>
+                <button class="thumb3-add-fab" id="thumb3AddBtn" type="button" aria-label="Add to custom thumbnail">+</button>
+                <div class="thumb3-add-menu" id="thumb3AddMenu" hidden>
+                  <button class="mini-btn" type="button" data-thumb3-add="text">Text</button>
+                  <button class="mini-btn" type="button" data-thumb3-add="image">Image</button>
+                  <button class="mini-btn" type="button" data-thumb3-add="weaponSlot">Weapon Slot</button>
+                  <button class="mini-btn" type="button" data-thumb3-add="squareSlot">Square Weapon Slot</button>
+                  <button class="mini-btn" type="button" data-thumb3-add="weapon">Weapon</button>
+                  <button class="mini-btn" type="button" data-thumb3-add="background">New Background</button>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="thumb2-action-row under-stage thumb3-action-row">
+            <button class="mini-btn screen-fullscreen-btn" id="thumb3FullscreenBtn" type="button">Fullscreen Thumbnail</button>
+            <button class="mini-btn" id="thumb3DownloadBtn" type="button">Download Thumbnail</button>
+            <button class="mini-btn" id="thumb3ClearBtn" type="button">Clear Elements</button>
+          </div>
+
+          <div class="thumb3-controls thumb-controls">
+            <div class="thumb-control-card">
+              <h3>Global Settings</h3>
+              <label class="thumb-mini-control"><span>Brightness</span><input id="thumb3GlobalBrightness" type="range" min="0.2" max="2.4" value="1" step="0.01" /></label>
+              <label class="thumb-mini-control"><span>Saturation</span><input id="thumb3GlobalSaturation" type="range" min="0" max="3" value="1" step="0.01" /></label>
+              <label class="thumb-mini-control"><span>Hue</span><input id="thumb3GlobalHue" type="range" min="-180" max="180" value="0" step="1" /></label>
+              <label class="thumb-mini-control"><span>Darkness</span><input id="thumb3GlobalDarkness" type="range" min="0" max="0.9" value="0" step="0.01" /></label>
+              <p class="thumb3-help">Start with the Arena background, then press the + in the top-right to build your thumbnail from scratch.</p>
+            </div>
+
+            <div class="thumb-control-card thumb3-selected-card">
+              <h3>Selected Element</h3>
+              <div id="thumb3NoSelection" class="thumb3-no-selection">Select or add an element to customize it.</div>
+              <div id="thumb3SelectedControls" hidden>
+                <label class="thumb-mini-control"><span>Element Type</span><input id="thumb3SelectedType" type="text" disabled value="" /></label>
+                <label class="thumb-mini-control"><span>X Position</span><input id="thumb3PosX" type="range" min="-560" max="560" value="0" step="1" /></label>
+                <label class="thumb-mini-control"><span>Y Position</span><input id="thumb3PosY" type="range" min="-320" max="320" value="0" step="1" /></label>
+                <label class="thumb-mini-control"><span>Scale</span><input id="thumb3Scale" type="range" min="0.1" max="4" value="1" step="0.01" /></label>
+                <label class="thumb-mini-control"><span>Stretch X</span><input id="thumb3StretchX" type="range" min="0.1" max="4" value="1" step="0.01" /></label>
+                <label class="thumb-mini-control"><span>Stretch Y</span><input id="thumb3StretchY" type="range" min="0.1" max="4" value="1" step="0.01" /></label>
+                <label class="thumb-mini-control"><span>Opacity</span><input id="thumb3Opacity" type="range" min="0" max="1" value="1" step="0.01" /></label>
+                <label class="thumb-mini-control"><span>Brightness</span><input id="thumb3Brightness" type="range" min="0" max="2.5" value="1" step="0.01" /></label>
+                <div class="thumb3-weapon-controls" id="thumb3WeaponControls" hidden>
+                  <label class="thumb-mini-control"><span>Weapon</span><select id="thumb3WeaponSelect"></select></label>
+                </div>
+                <div class="thumb3-text-controls" id="thumb3TextControls" hidden>
+                  <label class="thumb-mini-control"><span>Text</span><input id="thumb3TextValue" type="text" value="TEXT" maxlength="42" /></label>
+                  <label class="thumb-mini-control"><span>Text Color</span><input id="thumb3TextColor" type="color" value="#ffffff" /></label>
+                  <label class="thumb-mini-control"><span>Font Size</span><input id="thumb3FontSize" type="range" min="16" max="240" value="108" step="1" /></label>
+                  <label class="thumb-check"><input id="thumb3StrokeEnabled" type="checkbox" checked /> Enable text stroke</label>
+                  <label class="thumb-mini-control"><span>Stroke Color</span><input id="thumb3StrokeColor" type="color" value="#000000" /></label>
+                  <label class="thumb-mini-control"><span>Stroke Size</span><input id="thumb3StrokeSize" type="range" min="0" max="20" value="8" step="0.25" /></label>
+                  <label class="thumb-check"><input id="thumb3ShadowEnabled" type="checkbox" checked /> Enable drop shadow</label>
+                  <label class="thumb-mini-control"><span>Shadow Color</span><input id="thumb3ShadowColor" type="color" value="#000000" /></label>
+                  <label class="thumb-mini-control"><span>Shadow Opacity</span><input id="thumb3ShadowOpacity" type="range" min="0" max="1" value="0.45" step="0.01" /></label>
+                  <label class="thumb-mini-control"><span>Shadow Blur</span><input id="thumb3ShadowBlur" type="range" min="0" max="24" value="0" step="0.25" /></label>
+                  <label class="thumb-mini-control"><span>Shadow X</span><input id="thumb3ShadowX" type="range" min="-60" max="60" value="0" step="1" /></label>
+                  <label class="thumb-mini-control"><span>Shadow Y</span><input id="thumb3ShadowY" type="range" min="-60" max="60" value="10" step="1" /></label>
+                </div>
+                <div class="thumb3-image-controls" id="thumb3ImageControls" hidden>
+                  <button class="mini-btn" type="button" id="thumb3ReplaceImageBtn">Replace Image</button>
+                </div>
+                <button class="mini-btn" type="button" id="thumb3RemoveSelectedBtn">Remove Selected Element</button>
+              </div>
+            </div>
+          </div>
+
+          <input id="thumb3ImageInput" type="file" accept="image/*" hidden />
+          <input id="thumb3BgInput" type="file" accept="image/*" hidden />
+        `;
+        thumb3InsertAfter?.after(thumb3Template);
+
+        const thumb3Stage = thumb3Template.querySelector('#thumb3Stage');
+        const thumb3Canvas = thumb3Template.querySelector('#thumb3Canvas');
+        const thumb3Scene = thumb3Template.querySelector('#thumb3Scene');
+        const thumb3BgImg = thumb3Template.querySelector('#thumb3BgImg');
+        const thumb3Darkness = thumb3Template.querySelector('#thumb3Darkness');
+        const thumb3ElementLayer = thumb3Template.querySelector('#thumb3ElementLayer');
+        const thumb3AddBtn = thumb3Template.querySelector('#thumb3AddBtn');
+        const thumb3AddMenu = thumb3Template.querySelector('#thumb3AddMenu');
+        const thumb3FullscreenBtn = thumb3Template.querySelector('#thumb3FullscreenBtn');
+        const thumb3DownloadBtn = thumb3Template.querySelector('#thumb3DownloadBtn');
+        const thumb3ClearBtn = thumb3Template.querySelector('#thumb3ClearBtn');
+        const thumb3ImageInput = thumb3Template.querySelector('#thumb3ImageInput');
+        const thumb3BgInput = thumb3Template.querySelector('#thumb3BgInput');
+        const thumb3GlobalBrightness = thumb3Template.querySelector('#thumb3GlobalBrightness');
+        const thumb3GlobalSaturation = thumb3Template.querySelector('#thumb3GlobalSaturation');
+        const thumb3GlobalHue = thumb3Template.querySelector('#thumb3GlobalHue');
+        const thumb3GlobalDarkness = thumb3Template.querySelector('#thumb3GlobalDarkness');
+        const thumb3NoSelection = thumb3Template.querySelector('#thumb3NoSelection');
+        const thumb3SelectedControls = thumb3Template.querySelector('#thumb3SelectedControls');
+        const thumb3SelectedType = thumb3Template.querySelector('#thumb3SelectedType');
+        const thumb3PosX = thumb3Template.querySelector('#thumb3PosX');
+        const thumb3PosY = thumb3Template.querySelector('#thumb3PosY');
+        const thumb3Scale = thumb3Template.querySelector('#thumb3Scale');
+        const thumb3StretchX = thumb3Template.querySelector('#thumb3StretchX');
+        const thumb3StretchY = thumb3Template.querySelector('#thumb3StretchY');
+        const thumb3Opacity = thumb3Template.querySelector('#thumb3Opacity');
+        const thumb3Brightness = thumb3Template.querySelector('#thumb3Brightness');
+        const thumb3WeaponControls = thumb3Template.querySelector('#thumb3WeaponControls');
+        const thumb3WeaponSelect = thumb3Template.querySelector('#thumb3WeaponSelect');
+        const thumb3TextControls = thumb3Template.querySelector('#thumb3TextControls');
+        const thumb3TextValue = thumb3Template.querySelector('#thumb3TextValue');
+        const thumb3TextColor = thumb3Template.querySelector('#thumb3TextColor');
+        const thumb3FontSize = thumb3Template.querySelector('#thumb3FontSize');
+        const thumb3StrokeEnabled = thumb3Template.querySelector('#thumb3StrokeEnabled');
+        const thumb3StrokeColor = thumb3Template.querySelector('#thumb3StrokeColor');
+        const thumb3StrokeSize = thumb3Template.querySelector('#thumb3StrokeSize');
+        const thumb3ShadowEnabled = thumb3Template.querySelector('#thumb3ShadowEnabled');
+        const thumb3ShadowColor = thumb3Template.querySelector('#thumb3ShadowColor');
+        const thumb3ShadowOpacity = thumb3Template.querySelector('#thumb3ShadowOpacity');
+        const thumb3ShadowBlur = thumb3Template.querySelector('#thumb3ShadowBlur');
+        const thumb3ShadowX = thumb3Template.querySelector('#thumb3ShadowX');
+        const thumb3ShadowY = thumb3Template.querySelector('#thumb3ShadowY');
+        const thumb3ImageControls = thumb3Template.querySelector('#thumb3ImageControls');
+        const thumb3ReplaceImageBtn = thumb3Template.querySelector('#thumb3ReplaceImageBtn');
+        const thumb3RemoveSelectedBtn = thumb3Template.querySelector('#thumb3RemoveSelectedBtn');
+
+        const thumb3State = {
+          bgSrc: screenBackgrounds.grid,
+          elements: [],
+          selectedId: null,
+          pendingUpload: null,
+          nextId: 1,
+          global: { brightness: 1, saturation: 1, hue: 0, darkness: 0 }
+        };
+        const defaultThumb3Weapon = () => getWeapon('Assault Rifle') || getWeapon('Handgun') || allWeapons[0] || { name:'Weapon', category:'Weapon', img: placeholderSvg('Weapon', 'Weapon') };
+        const createThumb3Id = () => `thumb3_${thumb3State.nextId++}`;
+        const thumb3WeaponOptionsHtml = () => allWeapons.map(w => `<option value="${escapeHtml(w.name)}">${escapeHtml(w.name)}</option>`).join('');
+        thumb3WeaponSelect.innerHTML = thumb3WeaponOptionsHtml();
+
+        const createThumb3Element = (type, extra = {}) => {
+          const baseWeapon = extra.weapon || defaultThumb3Weapon();
+          const weaponImg = baseWeapon.skinFile ? '' : (baseWeapon.img || placeholderSvg(baseWeapon.name, baseWeapon.category));
+          return Object.assign({
+            id: createThumb3Id(),
+            type,
+            x: 0,
+            y: 0,
+            scale: 1,
+            stretchX: 1,
+            stretchY: 1,
+            opacity: 1,
+            brightness: 1,
+            width: type === 'text' ? 680 : type === 'weapon' ? 340 : type === 'squareSlot' ? 270 : 320,
+            height: type === 'text' ? 160 : type === 'weapon' ? 240 : type === 'squareSlot' ? 270 : 220,
+            text: 'TEXT',
+            color: '#ffffff',
+            fontSize: 108,
+            strokeEnabled: true,
+            strokeColor: '#000000',
+            strokeSize: 8,
+            shadowEnabled: true,
+            shadowColor: '#000000',
+            shadowOpacity: 0.45,
+            shadowBlur: 0,
+            shadowX: 0,
+            shadowY: 10,
+            src: '',
+            weaponName: baseWeapon.name,
+            weaponImg,
+            label: baseWeapon.name,
+            showLabel: type !== 'weapon'
+          }, extra);
+        };
+
+        const getThumb3Selected = () => thumb3State.elements.find(item => item.id === thumb3State.selectedId) || null;
+        const selectThumb3Element = id => {
+          thumb3State.selectedId = id || null;
+          renderThumb3();
+          syncThumb3Controls();
+        };
+
+        const applyThumb3Global = () => {
+          thumb3State.global.brightness = Number(thumb3GlobalBrightness.value) || 1;
+          thumb3State.global.saturation = Number(thumb3GlobalSaturation.value) || 1;
+          thumb3State.global.hue = Number(thumb3GlobalHue.value) || 0;
+          thumb3State.global.darkness = Number(thumb3GlobalDarkness.value) || 0;
+          thumb3Scene.style.filter = `brightness(${thumb3State.global.brightness}) saturate(${thumb3State.global.saturation}) hue-rotate(${thumb3State.global.hue}deg)`;
+          thumb3Darkness.style.opacity = String(thumb3State.global.darkness);
+        };
+
+        const renderThumb3Element = element => {
+          const wrapper = document.createElement('div');
+          wrapper.className = `thumb3-element thumb3-element-${element.type}${thumb3State.selectedId === element.id ? ' is-selected' : ''}`;
+          wrapper.dataset.thumb3Element = element.id;
+          wrapper.style.left = '50%';
+          wrapper.style.top = '50%';
+          wrapper.style.width = `${element.width}px`;
+          wrapper.style.height = `${element.height}px`;
+          wrapper.style.opacity = String(element.opacity);
+          wrapper.style.filter = `brightness(${element.brightness || 1})`;
+          wrapper.style.transform = `translate(-50%, -50%) translate(${element.x}px, ${element.y}px) scale(${(element.scale || 1) * (element.stretchX || 1)}, ${(element.scale || 1) * (element.stretchY || 1)})`;
+          wrapper.title = 'Drag to reposition';
+
+          if (element.type === 'text') {
+            const text = document.createElement('div');
+            text.className = 'thumb3-text-node';
+            text.textContent = element.text || 'TEXT';
+            text.style.color = element.color || '#ffffff';
+            text.style.fontSize = `${element.fontSize || 108}px`;
+            text.style.webkitTextStroke = element.strokeEnabled ? `${element.strokeSize || 0}px ${element.strokeColor || '#000000'}` : '0 transparent';
+            text.style.textShadow = element.shadowEnabled ? `${element.shadowX || 0}px ${element.shadowY || 0}px ${element.shadowBlur || 0}px rgba(${parseInt((element.shadowColor || '#000000').slice(1,3),16)},${parseInt((element.shadowColor || '#000000').slice(3,5),16)},${parseInt((element.shadowColor || '#000000').slice(5,7),16)},${Number(element.shadowOpacity || 0)})` : 'none';
+            wrapper.appendChild(text);
+            return wrapper;
+          }
+
+          if (element.type === 'weapon') {
+            const img = document.createElement('img');
+            img.className = 'thumb3-weapon-standalone';
+            img.src = element.src || element.weaponImg || placeholderSvg(element.weaponName || 'Weapon', 'Weapon');
+            img.alt = element.weaponName || 'Weapon';
+            img.draggable = false;
+            wrapper.appendChild(img);
+            return wrapper;
+          }
+
+          if (element.type === 'image') {
+            const img = document.createElement('img');
+            img.className = 'thumb3-image-node';
+            img.src = element.src || placeholderSvg('Image', 'Custom');
+            img.alt = 'Custom image';
+            img.draggable = false;
+            wrapper.appendChild(img);
+            return wrapper;
+          }
+
+          const slotBg = document.createElement('div');
+          slotBg.className = `thumb3-slot-shell ${element.type === 'squareSlot' ? 'square' : 'wide'}`;
+          if (element.type === 'weaponSlot') {
+            const slotBgImg = document.createElement('img');
+            slotBgImg.className = 'thumb3-slot-bg';
+            slotBgImg.src = thumb2SlotBgSrc || '';
+            slotBgImg.alt = '';
+            slotBgImg.draggable = false;
+            slotBg.appendChild(slotBgImg);
+          }
+          const weaponImg = document.createElement('img');
+          weaponImg.className = 'thumb3-slot-weapon';
+          weaponImg.src = element.src || element.weaponImg || placeholderSvg(element.weaponName || 'Weapon', 'Weapon');
+          weaponImg.alt = element.weaponName || 'Weapon';
+          weaponImg.draggable = false;
+          slotBg.appendChild(weaponImg);
+          if (element.showLabel !== false) {
+            const label = document.createElement('div');
+            label.className = 'thumb3-slot-label';
+            label.textContent = element.label || element.weaponName || 'Weapon';
+            slotBg.appendChild(label);
+          }
+          wrapper.appendChild(slotBg);
+          return wrapper;
+        };
+
+        const renderThumb3 = () => {
+          thumb3BgImg.src = thumb3State.bgSrc || screenBackgrounds.grid;
+          thumb3ElementLayer.innerHTML = '';
+          thumb3State.elements.forEach(element => {
+            thumb3ElementLayer.appendChild(renderThumb3Element(element));
+          });
+          applyThumb3Global();
+        };
+
+        const syncThumb3Controls = () => {
+          const element = getThumb3Selected();
+          const isText = element?.type === 'text';
+          const isWeaponType = ['weapon', 'weaponSlot', 'squareSlot'].includes(element?.type);
+          const isImageLike = ['image', 'weapon', 'weaponSlot', 'squareSlot'].includes(element?.type);
+          thumb3NoSelection.hidden = Boolean(element);
+          thumb3SelectedControls.hidden = !element;
+          thumb3TextControls.hidden = !isText;
+          thumb3WeaponControls.hidden = !isWeaponType;
+          thumb3ImageControls.hidden = !isImageLike;
+          if (!element) return;
+          thumb3SelectedType.value = element.type;
+          thumb3PosX.value = String(element.x || 0);
+          thumb3PosY.value = String(element.y || 0);
+          thumb3Scale.value = String(element.scale || 1);
+          thumb3StretchX.value = String(element.stretchX || 1);
+          thumb3StretchY.value = String(element.stretchY || 1);
+          thumb3Opacity.value = String(element.opacity ?? 1);
+          thumb3Brightness.value = String(element.brightness || 1);
+          if (isWeaponType) thumb3WeaponSelect.value = element.weaponName || defaultThumb3Weapon().name;
+          if (isText) {
+            thumb3TextValue.value = element.text || 'TEXT';
+            thumb3TextColor.value = element.color || '#ffffff';
+            thumb3FontSize.value = String(element.fontSize || 108);
+            thumb3StrokeEnabled.checked = element.strokeEnabled !== false;
+            thumb3StrokeColor.value = element.strokeColor || '#000000';
+            thumb3StrokeSize.value = String(element.strokeSize || 0);
+            thumb3ShadowEnabled.checked = element.shadowEnabled !== false;
+            thumb3ShadowColor.value = element.shadowColor || '#000000';
+            thumb3ShadowOpacity.value = String(element.shadowOpacity ?? 0.45);
+            thumb3ShadowBlur.value = String(element.shadowBlur || 0);
+            thumb3ShadowX.value = String(element.shadowX || 0);
+            thumb3ShadowY.value = String(element.shadowY || 10);
+          }
+        };
+
+        const updateThumb3Selected = updater => {
+          const element = getThumb3Selected();
+          if (!element) return;
+          updater(element);
+          renderThumb3();
+          syncThumb3Controls();
+        };
+
+        const addThumb3Element = element => {
+          thumb3State.elements.push(element);
+          selectThumb3Element(element.id);
+          renderThumb3();
+        };
+
+        const setThumb3Weapon = (element, weaponName) => {
+          const weapon = getWeapon(weaponName) || allWeapons.find(w => w.name === weaponName) || defaultThumb3Weapon();
+          element.weaponName = weapon.name;
+          element.weaponImg = weapon.img || placeholderSvg(weapon.name, weapon.category);
+          element.src = weapon.img || placeholderSvg(weapon.name, weapon.category);
+          element.label = weapon.name;
+        };
+
+        const thumb3AddByType = type => {
+          const weapon = defaultThumb3Weapon();
+          if (type === 'background') {
+            thumb3State.pendingUpload = 'background';
+            thumb3BgInput.value = '';
+            thumb3BgInput.click();
+            return;
+          }
+          if (type === 'image') {
+            thumb3State.pendingUpload = 'image';
+            thumb3ImageInput.value = '';
+            thumb3ImageInput.click();
+            return;
+          }
+          if (type === 'text') {
+            addThumb3Element(createThumb3Element('text', { text: 'TEXT', width: 760, height: 180 }));
+            return;
+          }
+          if (type === 'weapon') {
+            addThumb3Element(createThumb3Element('weapon', { weaponName: weapon.name, weaponImg: weapon.img || placeholderSvg(weapon.name, weapon.category), src: weapon.img || placeholderSvg(weapon.name, weapon.category), width: 340, height: 240 }));
+            return;
+          }
+          if (type === 'weaponSlot') {
+            addThumb3Element(createThumb3Element('weaponSlot', { weaponName: weapon.name, weaponImg: weapon.img || placeholderSvg(weapon.name, weapon.category), src: weapon.img || placeholderSvg(weapon.name, weapon.category), width: 310, height: 220 }));
+            return;
+          }
+          if (type === 'squareSlot') {
+            addThumb3Element(createThumb3Element('squareSlot', { weaponName: weapon.name, weaponImg: weapon.img || placeholderSvg(weapon.name, weapon.category), src: weapon.img || placeholderSvg(weapon.name, weapon.category), width: 270, height: 270 }));
+            return;
+          }
+        };
+
+        const inlineSvgExport = async (node, fileName) => {
+          if (!node) return;
+          const copyStyles = (source, target) => {
+            const computed = getComputedStyle(source);
+            let cssText = '';
+            for (let i = 0; i < computed.length; i++) {
+              const key = computed[i];
+              cssText += `${key}:${computed.getPropertyValue(key)};`;
+            }
+            target.setAttribute('style', cssText);
+            if (target instanceof HTMLImageElement || target.tagName === 'IMG') {
+              const sourceSrc = source.getAttribute('src') || source.src || '';
+              if (sourceSrc) target.setAttribute('src', new URL(sourceSrc, location.href).href);
+            }
+            Array.from(source.children).forEach((child, index) => copyStyles(child, target.children[index]));
+          };
+          const clone = node.cloneNode(true);
+          copyStyles(node, clone);
+          clone.querySelectorAll('[hidden]').forEach(el => el.removeAttribute('hidden'));
+          clone.querySelectorAll('button').forEach(el => el.remove());
+          const wrapper = document.createElement('div');
+          wrapper.appendChild(clone);
+          await document.fonts?.ready;
+          const xhtml = new XMLSerializer().serializeToString(wrapper);
+          const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="1920" height="1080" viewBox="0 0 1280 720"><foreignObject width="100%" height="100%" transform="scale(1.5)"><div xmlns="http://www.w3.org/1999/xhtml">${xhtml}</div></foreignObject></svg>`;
+          const url = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(svg);
+          const img = new Image();
+          img.crossOrigin = 'anonymous';
+          img.onload = () => {
+            const canvas = document.createElement('canvas');
+            canvas.width = 1920;
+            canvas.height = 1080;
+            const ctx = canvas.getContext('2d');
+            ctx.drawImage(img, 0, 0, 1920, 1080);
+            const a = document.createElement('a');
+            a.href = canvas.toDataURL('image/png');
+            a.download = fileName;
+            a.click();
+          };
+          img.onerror = () => alert('Download failed. Try again after all thumbnail images fully load.');
+          img.src = url;
+        };
+
+        thumbTemplate3Btn?.addEventListener('click', () => setThumbnailTemplate('3'));
+        thumb3AddBtn?.addEventListener('click', () => {
+          thumb3AddMenu.hidden = !thumb3AddMenu.hidden;
+        });
+        thumb3AddMenu?.addEventListener('click', event => {
+          const btn = event.target.closest('[data-thumb3-add]');
+          if (!btn) return;
+          thumb3AddMenu.hidden = true;
+          thumb3AddByType(btn.dataset.thumb3Add);
+        });
+        document.addEventListener('click', event => {
+          if (!thumb3Template.contains(event.target)) return;
+        });
+        document.addEventListener('pointerdown', event => {
+          if (!thumb3Template.contains(event.target) && !thumb3AddMenu.hidden) thumb3AddMenu.hidden = true;
+        });
+        thumb3ImageInput?.addEventListener('change', async () => {
+          const file = thumb3ImageInput.files?.[0];
+          if (!file) return;
+          const src = await fileToDataUrl(file);
+          const selected = getThumb3Selected();
+          if (thumb3State.pendingUpload === 'replace-selected' && selected && ['image', 'weapon', 'weaponSlot', 'squareSlot'].includes(selected.type)) {
+            selected.src = src;
+            selected.weaponImg = src;
+            renderThumb3();
+            syncThumb3Controls();
+          } else {
+            addThumb3Element(createThumb3Element('image', { src, width: 320, height: 320 }));
+          }
+          thumb3State.pendingUpload = null;
+        });
+        thumb3BgInput?.addEventListener('change', async () => {
+          const file = thumb3BgInput.files?.[0];
+          if (!file) return;
+          thumb3State.bgSrc = await fileToDataUrl(file);
+          renderThumb3();
+          thumb3State.pendingUpload = null;
+        });
+        thumb3FullscreenBtn?.addEventListener('click', () => window.openRivalsToolsStableFullscreen?.(thumb3Stage));
+        thumb3DownloadBtn?.addEventListener('click', () => inlineSvgExport(thumb3Scene, `rivalstools-custom-thumbnail-${Date.now()}.png`));
+        thumb3ClearBtn?.addEventListener('click', () => {
+          thumb3State.elements = [];
+          selectThumb3Element(null);
+          renderThumb3();
+        });
+        thumb3RemoveSelectedBtn?.addEventListener('click', () => {
+          if (!thumb3State.selectedId) return;
+          thumb3State.elements = thumb3State.elements.filter(item => item.id !== thumb3State.selectedId);
+          selectThumb3Element(null);
+          renderThumb3();
+        });
+        thumb3ReplaceImageBtn?.addEventListener('click', () => {
+          if (!getThumb3Selected()) return;
+          thumb3State.pendingUpload = 'replace-selected';
+          thumb3ImageInput.value = '';
+          thumb3ImageInput.click();
+        });
+
+        const bindThumb3Range = (el, fn) => el?.addEventListener('input', event => { showRangeTooltip(el, event); fn(); });
+        [thumb3GlobalBrightness, thumb3GlobalSaturation, thumb3GlobalHue, thumb3GlobalDarkness].forEach(input => bindThumb3Range(input, applyThumb3Global));
+        bindThumb3Range(thumb3PosX, () => updateThumb3Selected(item => item.x = Number(thumb3PosX.value) || 0));
+        bindThumb3Range(thumb3PosY, () => updateThumb3Selected(item => item.y = Number(thumb3PosY.value) || 0));
+        bindThumb3Range(thumb3Scale, () => updateThumb3Selected(item => item.scale = Number(thumb3Scale.value) || 1));
+        bindThumb3Range(thumb3StretchX, () => updateThumb3Selected(item => item.stretchX = Number(thumb3StretchX.value) || 1));
+        bindThumb3Range(thumb3StretchY, () => updateThumb3Selected(item => item.stretchY = Number(thumb3StretchY.value) || 1));
+        bindThumb3Range(thumb3Opacity, () => updateThumb3Selected(item => item.opacity = Number(thumb3Opacity.value) || 0));
+        bindThumb3Range(thumb3Brightness, () => updateThumb3Selected(item => item.brightness = Number(thumb3Brightness.value) || 1));
+        thumb3WeaponSelect?.addEventListener('change', () => updateThumb3Selected(item => setThumb3Weapon(item, thumb3WeaponSelect.value)));
+        thumb3TextValue?.addEventListener('input', () => updateThumb3Selected(item => item.text = thumb3TextValue.value || 'TEXT'));
+        thumb3TextColor?.addEventListener('input', () => updateThumb3Selected(item => item.color = thumb3TextColor.value || '#ffffff'));
+        bindThumb3Range(thumb3FontSize, () => updateThumb3Selected(item => item.fontSize = Number(thumb3FontSize.value) || 108));
+        thumb3StrokeEnabled?.addEventListener('change', () => updateThumb3Selected(item => item.strokeEnabled = Boolean(thumb3StrokeEnabled.checked)));
+        thumb3StrokeColor?.addEventListener('input', () => updateThumb3Selected(item => item.strokeColor = thumb3StrokeColor.value || '#000000'));
+        bindThumb3Range(thumb3StrokeSize, () => updateThumb3Selected(item => item.strokeSize = Number(thumb3StrokeSize.value) || 0));
+        thumb3ShadowEnabled?.addEventListener('change', () => updateThumb3Selected(item => item.shadowEnabled = Boolean(thumb3ShadowEnabled.checked)));
+        thumb3ShadowColor?.addEventListener('input', () => updateThumb3Selected(item => item.shadowColor = thumb3ShadowColor.value || '#000000'));
+        bindThumb3Range(thumb3ShadowOpacity, () => updateThumb3Selected(item => item.shadowOpacity = Number(thumb3ShadowOpacity.value) || 0));
+        bindThumb3Range(thumb3ShadowBlur, () => updateThumb3Selected(item => item.shadowBlur = Number(thumb3ShadowBlur.value) || 0));
+        bindThumb3Range(thumb3ShadowX, () => updateThumb3Selected(item => item.shadowX = Number(thumb3ShadowX.value) || 0));
+        bindThumb3Range(thumb3ShadowY, () => updateThumb3Selected(item => item.shadowY = Number(thumb3ShadowY.value) || 0));
+
+        let thumb3Drag = null;
+        thumb3ElementLayer?.addEventListener('pointerdown', event => {
+          const target = event.target.closest('.thumb3-element');
+          if (!target) return;
+          const id = target.dataset.thumb3Element;
+          const element = thumb3State.elements.find(item => item.id === id);
+          if (!element) return;
+          selectThumb3Element(id);
+          event.preventDefault();
+          thumb3Drag = { id, startX: event.clientX, startY: event.clientY, x: element.x || 0, y: element.y || 0 };
+          target.setPointerCapture?.(event.pointerId);
+        });
+        window.addEventListener('pointermove', event => {
+          if (!thumb3Drag) return;
+          const element = thumb3State.elements.find(item => item.id === thumb3Drag.id);
+          if (!element) return;
+          element.x = Math.max(-620, Math.min(620, thumb3Drag.x + (event.clientX - thumb3Drag.startX)));
+          element.y = Math.max(-340, Math.min(340, thumb3Drag.y + (event.clientY - thumb3Drag.startY)));
+          renderThumb3();
+          syncThumb3Controls();
+        });
+        window.addEventListener('pointerup', () => { thumb3Drag = null; });
+        thumb3Canvas?.addEventListener('click', event => {
+          const target = event.target.closest('.thumb3-element');
+          if (!target && !event.target.closest('.thumb3-add-fab') && !event.target.closest('.thumb3-add-menu')) {
+            selectThumb3Element(null);
+          }
+        });
+
+        window.__rtThumb3Refresh = renderThumb3;
+        renderThumb3();
+        syncThumb3Controls();
 
         thumb2ApplyDefaultPreset();
         applyThumb2Global();
@@ -5646,9 +6188,12 @@ thumbClearBtn?.addEventListener("click", () => {
   window.openRivalsToolsStableFullscreen = function(sourceEl) {
     if (!sourceEl) return;
 
+    const isThumb2Stage = sourceEl.classList?.contains('thumb2-stage');
+    const isThumb3Stage = sourceEl.classList?.contains('thumb3-stage');
+    const useFixedThumbSize = isThumb2Stage || isThumb3Stage;
     const sourceRect = sourceEl.getBoundingClientRect();
-    const sourceWidth = Math.max(320, Math.round(sourceRect.width || sourceEl.offsetWidth || 1280));
-    const sourceHeight = Math.max(180, Math.round(sourceRect.height || sourceEl.offsetHeight || sourceWidth * 9 / 16));
+    const sourceWidth = useFixedThumbSize ? 1280 : Math.max(320, Math.round(sourceRect.width || sourceEl.offsetWidth || 1280));
+    const sourceHeight = useFixedThumbSize ? 720 : Math.max(180, Math.round(sourceRect.height || sourceEl.offsetHeight || sourceWidth * 9 / 16));
 
     const oldOverlay = document.querySelector(".rt-fullscreen-overlay");
     oldOverlay?.remove();
@@ -5673,6 +6218,40 @@ thumbClearBtn?.addEventListener("click", () => {
     clone.style.transformOrigin = "top left";
     clone.style.margin = "0";
 
+    if (isThumb2Stage) {
+      clone.style.setProperty('--thumb2-render-scale', '1');
+      const thumb2Canvas = clone.querySelector('.thumb2-canvas');
+      if (thumb2Canvas) {
+        thumb2Canvas.style.position = 'absolute';
+        thumb2Canvas.style.inset = '0';
+        thumb2Canvas.style.width = '1280px';
+        thumb2Canvas.style.height = '720px';
+        thumb2Canvas.style.transform = 'none';
+      }
+      const bg = clone.querySelector('.thumb2-bg-img');
+      if (bg) {
+        bg.style.objectFit = 'cover';
+        bg.style.width = '100%';
+        bg.style.height = '100%';
+      }
+    }
+
+    if (isThumb3Stage) {
+      const thumb3Canvas = clone.querySelector('.thumb3-canvas');
+      const thumb3Scene = clone.querySelector('.thumb3-scene');
+      if (thumb3Canvas) {
+        thumb3Canvas.style.position = 'absolute';
+        thumb3Canvas.style.inset = '0';
+        thumb3Canvas.style.width = '1280px';
+        thumb3Canvas.style.height = '720px';
+        thumb3Canvas.style.transform = 'none';
+      }
+      if (thumb3Scene) {
+        thumb3Scene.style.width = '1280px';
+        thumb3Scene.style.height = '720px';
+      }
+    }
+
     const closeBtn = document.createElement("button");
     closeBtn.type = "button";
     closeBtn.className = "rt-fullscreen-close";
@@ -5685,14 +6264,21 @@ thumbClearBtn?.addEventListener("click", () => {
     document.body.appendChild(overlay);
 
     const updateScale = () => {
-      const pad = Math.min(28, Math.max(10, window.innerWidth * 0.018));
+      const pad = Math.min(36, Math.max(14, window.innerWidth * 0.022));
       const scale = Math.min(
         (window.innerWidth - pad * 2) / sourceWidth,
-        (window.innerHeight - pad * 2) / sourceHeight
+        (window.innerHeight - pad * 2) / sourceHeight,
+        1.35
       );
       const safeScale = Number.isFinite(scale) && scale > 0 ? scale : 1;
-      stageWrap.style.width = `${sourceWidth * safeScale}px`;
-      stageWrap.style.height = `${sourceHeight * safeScale}px`;
+      stageWrap.style.width = `${Math.floor(sourceWidth * safeScale)}px`;
+      stageWrap.style.height = `${Math.floor(sourceHeight * safeScale)}px`;
+      stageWrap.style.overflow = "hidden";
+      stageWrap.style.borderRadius = "20px";
+      clone.style.position = "absolute";
+      clone.style.left = "0";
+      clone.style.top = "0";
+      clone.style.transformOrigin = "top left";
       clone.style.transform = `scale(${safeScale})`;
     };
 

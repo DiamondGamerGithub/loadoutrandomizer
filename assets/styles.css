@@ -6615,3 +6615,40 @@ body.thumbnail-page.thumb3-template-active .thumb3-template {
     right: 12px;
   }
 }
+
+
+/* v98 fixes: visible Custom Thumbnail tab + clipped fullscreen scaling */
+#thumbTemplate3Btn {
+  display: inline-flex !important;
+}
+
+.rt-fullscreen-stage-wrap {
+  overflow: hidden !important;
+  border-radius: 20px !important;
+  box-shadow:
+    0 30px 100px rgba(0,0,0,0.55),
+    0 0 0 1px rgba(255,255,255,0.10);
+}
+
+.rt-fullscreen-clone-stage {
+  box-shadow: none !important;
+  border-radius: 20px !important;
+}
+
+.rt-fullscreen-clone-stage.thumb2-stage {
+  width: 1280px !important;
+  height: 720px !important;
+  max-width: none !important;
+  max-height: none !important;
+  min-width: 0 !important;
+  min-height: 0 !important;
+}
+
+.rt-fullscreen-clone-stage.thumb2-stage .thumb2-canvas {
+  position: absolute !important;
+  inset: 0 !important;
+  width: 1280px !important;
+  height: 720px !important;
+  transform: none !important;
+  transform-origin: top left !important;
+}
