@@ -2078,19 +2078,8 @@ const exactAssetFileMap = {"10bvisits":["Skins2/10BVisits_Icon.png"],"10bvisitsi
         }
       });
 
-      screenFullscreenBtn?.addEventListener("click", async () => {
-        try {
-          if (!document.fullscreenElement && screenStage.requestFullscreen) {
-            await screenStage.requestFullscreen();
-          } else if (document.exitFullscreen) {
-            await document.exitFullscreen();
-          }
-        } catch (err) {
-          statusText.textContent = "FULLSCREEN BLOCKED";
-          setTimeout(() => {
-            if (activePage === "screen") statusText.textContent = "LOADOUT SCREEN";
-          }, 1100);
-        }
+      screenFullscreenBtn?.addEventListener("click", () => {
+        window.openRivalsToolsStableFullscreen?.(screenStage);
       });
 
       screenClearBtn?.addEventListener("click", () => {
@@ -3087,17 +3076,8 @@ const exactAssetFileMap = {"10bvisits":["Skins2/10BVisits_Icon.png"],"10bvisitsi
           updateFloatingPreview();
         });
 
-        thumbFullscreenBtn?.addEventListener("click", async () => {
-          try {
-            if (!document.fullscreenElement && thumbStage.requestFullscreen) {
-              await thumbStage.requestFullscreen();
-            } else if (document.exitFullscreen) {
-              await document.exitFullscreen();
-            }
-            setTimeout(updateThumbMetrics, 60);
-          } catch (err) {
-            statusText.textContent = "FULLSCREEN BLOCKED";
-          }
+        thumbFullscreenBtn?.addEventListener("click", () => {
+          window.openRivalsToolsStableFullscreen?.(thumbStage);
         });
 
         
@@ -3853,11 +3833,10 @@ thumbClearBtn?.addEventListener("click", () => {
         document.querySelectorAll('.thumb2-label-control').forEach(input => input.addEventListener('input', event => { showRangeTooltip(input, event); const idx = Number(input.dataset.thumb2Slot); const prop = input.dataset.thumb2Label; if (thumb2SlotState[idx]) { if (prop==='x') thumb2SlotState[idx].labelX = Number(input.value)||0; if (prop==='y') thumb2SlotState[idx].labelY = Number(input.value)||0; if (prop==='scale') thumb2SlotState[idx].labelScale = Number(input.value)||1; renderThumb2Slot(idx); updateThumb2Preview(); } }));
 
         thumb2ClearBtn?.addEventListener('click', ()=> { thumb2SlotState.forEach(s => s.weapon = null); renderAllThumb2Slots(); updateThumb2Preview(); });
-        thumb2FullscreenBtn?.addEventListener('click', async ()=> {
+        thumb2FullscreenBtn?.addEventListener('click', ()=> {
           if (!thumb2Stage) return;
-          if (document.fullscreenElement === thumb2Stage) await document.exitFullscreen();
-          else await thumb2Stage.requestFullscreen();
-          setTimeout(updateThumb2LayoutScale, 80);
+          updateThumb2LayoutScale();
+          window.openRivalsToolsStableFullscreen?.(thumb2Stage);
         });
 
         window.addEventListener('resize', updateThumb2LayoutScale);
@@ -5469,6 +5448,86 @@ thumbClearBtn?.addEventListener("click", () => {
     setTimeout(() => window.dispatchEvent(new Event("resize")), 60);
     setTimeout(() => window.dispatchEvent(new Event("resize")), 220);
   });
+})();
+
+
+(function(){
+  if (window.openRivalsToolsStableFullscreen) return;
+
+  window.openRivalsToolsStableFullscreen = function(sourceEl) {
+    if (!sourceEl) return;
+
+    const sourceRect = sourceEl.getBoundingClientRect();
+    const sourceWidth = Math.max(320, Math.round(sourceRect.width || sourceEl.offsetWidth || 1280));
+    const sourceHeight = Math.max(180, Math.round(sourceRect.height || sourceEl.offsetHeight || sourceWidth * 9 / 16));
+
+    const oldOverlay = document.querySelector(".rt-fullscreen-overlay");
+    oldOverlay?.remove();
+
+    const overlay = document.createElement("div");
+    overlay.className = "rt-fullscreen-overlay";
+    overlay.setAttribute("role", "dialog");
+    overlay.setAttribute("aria-modal", "true");
+
+    const stageWrap = document.createElement("div");
+    stageWrap.className = "rt-fullscreen-stage-wrap";
+
+    const clone = sourceEl.cloneNode(true);
+    clone.removeAttribute("id");
+    clone.querySelectorAll("[id]").forEach(node => node.removeAttribute("id"));
+    clone.classList.add("rt-fullscreen-clone-stage");
+    clone.style.width = `${sourceWidth}px`;
+    clone.style.height = `${sourceHeight}px`;
+    clone.style.maxWidth = "none";
+    clone.style.maxHeight = "none";
+    clone.style.aspectRatio = "auto";
+    clone.style.transformOrigin = "top left";
+    clone.style.margin = "0";
+
+    const closeBtn = document.createElement("button");
+    closeBtn.type = "button";
+    closeBtn.className = "rt-fullscreen-close";
+    closeBtn.textContent = "×";
+    closeBtn.setAttribute("aria-label", "Close fullscreen preview");
+
+    stageWrap.appendChild(clone);
+    overlay.appendChild(stageWrap);
+    overlay.appendChild(closeBtn);
+    document.body.appendChild(overlay);
+
+    const updateScale = () => {
+      const pad = Math.min(28, Math.max(10, window.innerWidth * 0.018));
+      const scale = Math.min(
+        (window.innerWidth - pad * 2) / sourceWidth,
+        (window.innerHeight - pad * 2) / sourceHeight
+      );
+      const safeScale = Number.isFinite(scale) && scale > 0 ? scale : 1;
+      stageWrap.style.width = `${sourceWidth * safeScale}px`;
+      stageWrap.style.height = `${sourceHeight * safeScale}px`;
+      clone.style.transform = `scale(${safeScale})`;
+    };
+
+    const close = () => {
+      window.removeEventListener("resize", updateScale);
+      document.removeEventListener("keydown", onKeyDown);
+      overlay.classList.add("closing");
+      setTimeout(() => overlay.remove(), 160);
+    };
+
+    const onKeyDown = event => {
+      if (event.key === "Escape") close();
+    };
+
+    overlay.addEventListener("click", event => {
+      if (event.target === overlay) close();
+    });
+    closeBtn.addEventListener("click", close);
+    document.addEventListener("keydown", onKeyDown);
+    window.addEventListener("resize", updateScale);
+
+    updateScale();
+    requestAnimationFrame(() => overlay.classList.add("show"));
+  };
 })();
 
 (function setupCursorBubble(){

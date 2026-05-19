@@ -6049,3 +6049,97 @@ body.home-page #homePage .home-card-image-wrap,
   max-height: none !important;
   transform: none !important;
 }
+
+
+
+/* v95 stable fullscreen overlay
+   Uses a scaled clone of the current preview so fullscreen matches the non-fullscreen version exactly. */
+.rt-fullscreen-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 2147483000;
+  display: grid;
+  place-items: center;
+  padding: 18px;
+  background:
+    radial-gradient(circle at 50% 0%, rgba(87, 215, 255, 0.10), transparent 42%),
+    rgba(3, 6, 14, 0.96);
+  opacity: 0;
+  transition: opacity 160ms ease;
+}
+
+.rt-fullscreen-overlay.show {
+  opacity: 1;
+}
+
+.rt-fullscreen-overlay.closing {
+  opacity: 0;
+}
+
+.rt-fullscreen-stage-wrap {
+  position: relative;
+  overflow: visible;
+  transform: translateZ(0);
+}
+
+.rt-fullscreen-clone-stage {
+  position: relative !important;
+  inset: auto !important;
+  display: block !important;
+  min-width: 0 !important;
+  min-height: 0 !important;
+  max-width: none !important;
+  max-height: none !important;
+  aspect-ratio: auto !important;
+  transform-origin: top left !important;
+  border-radius: 20px !important;
+  box-shadow:
+    0 30px 100px rgba(0,0,0,0.55),
+    0 0 0 1px rgba(255,255,255,0.10);
+}
+
+.rt-fullscreen-clone-stage.screen-stage,
+.rt-fullscreen-clone-stage.thumb-stage,
+.rt-fullscreen-clone-stage.thumb2-stage {
+  overflow: hidden !important;
+}
+
+.rt-fullscreen-clone-stage .screen-bg-image,
+.rt-fullscreen-clone-stage .thumb-bg-img,
+.rt-fullscreen-clone-stage .thumb2-bg-img {
+  object-fit: cover !important;
+}
+
+.rt-fullscreen-close {
+  position: fixed;
+  top: 18px;
+  right: 18px;
+  z-index: 2147483001;
+  width: 44px;
+  height: 44px;
+  border: 1px solid rgba(255,255,255,0.18);
+  border-radius: 999px;
+  background: rgba(12, 16, 31, 0.78);
+  color: #fff;
+  font-size: 28px;
+  line-height: 1;
+  font-weight: 900;
+  cursor: pointer;
+  box-shadow: 0 14px 38px rgba(0,0,0,0.34), inset 0 1px 0 rgba(255,255,255,0.12);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+}
+
+.rt-fullscreen-close:hover {
+  filter: brightness(1.15);
+  transform: translateY(-1px);
+}
+
+/* Undo older native fullscreen rules when a user enters fullscreen some other way. */
+.screen-stage:fullscreen,
+.thumb2-stage:fullscreen,
+.thumb-stage:fullscreen {
+  width: 100vw !important;
+  height: 100vh !important;
+  aspect-ratio: auto !important;
+}
