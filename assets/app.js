@@ -3526,7 +3526,107 @@ thumbClearBtn?.addEventListener("click", () => {
         const thumb2SlotState = Array.from({length:4}, () => ({ weapon: null, scale:1, imageX:0, imageY:0, labelX:0, labelY:0, labelScale:1 }));
         let thumb2PreviewTimer = null;
 
+        const thumb3GateConfig = {
+          key: 'rivalstools:custom-thumbnail-access:v1',
+          salt: 'rivalstools-custom-thumbnail-gate-v1::',
+          hash: '1f67a75488d92f127117587e861cdcdbd0d02c083cca3f905021dd8f912d0a4b'
+        };
+
+        const thumb3GateAuthorized = () => {
+          try { return sessionStorage.getItem(thumb3GateConfig.key) === '1'; }
+          catch (err) { return false; }
+        };
+
+        const thumb3GateSetAuthorized = () => {
+          try { sessionStorage.setItem(thumb3GateConfig.key, '1'); }
+          catch (err) {}
+        };
+
+        const thumb3HashText = async value => {
+          const bytes = new TextEncoder().encode(thumb3GateConfig.salt + value);
+          const digest = await crypto.subtle.digest('SHA-256', bytes);
+          return Array.from(new Uint8Array(digest)).map(byte => byte.toString(16).padStart(2, '0')).join('');
+        };
+
+        const ensureThumb3GateModal = () => {
+          let modal = document.getElementById('thumb3GateModal');
+          if (modal) return modal;
+          modal = document.createElement('div');
+          modal.id = 'thumb3GateModal';
+          modal.className = 'thumb3-gate-backdrop';
+          modal.setAttribute('aria-hidden', 'true');
+          modal.innerHTML = `
+            <div class="thumb3-gate-modal" role="dialog" aria-modal="true" aria-labelledby="thumb3GateTitle">
+              <button class="thumb3-gate-close" type="button" data-thumb3-gate-close aria-label="Close password window">×</button>
+              <h2 id="thumb3GateTitle">Under Construction!</h2>
+              <p>This part of the site is still a work in progress. To enter, use the password.</p>
+              <form id="thumb3GateForm" class="thumb3-gate-form" autocomplete="off">
+                <input id="thumb3GateInput" type="password" placeholder="Enter password" autocomplete="current-password" spellcheck="false" />
+                <button class="mini-btn" type="submit">Enter</button>
+              </form>
+              <div class="thumb3-gate-error" id="thumb3GateError" role="alert" hidden>Incorrect password.</div>
+            </div>
+          `;
+          document.body.appendChild(modal);
+
+          const close = () => {
+            modal.classList.remove('open');
+            modal.setAttribute('aria-hidden', 'true');
+          };
+
+          modal.querySelector('[data-thumb3-gate-close]')?.addEventListener('click', close);
+          modal.addEventListener('click', event => {
+            if (event.target === modal) close();
+          });
+          modal.querySelector('#thumb3GateForm')?.addEventListener('submit', async event => {
+            event.preventDefault();
+            const input = modal.querySelector('#thumb3GateInput');
+            const error = modal.querySelector('#thumb3GateError');
+            const button = modal.querySelector('button[type="submit"]');
+            const value = input?.value || '';
+            if (error) error.hidden = true;
+            if (button) button.disabled = true;
+            try {
+              const digest = await thumb3HashText(value);
+              if (digest === thumb3GateConfig.hash) {
+                thumb3GateSetAuthorized();
+                close();
+                setThumbnailTemplate('3');
+              } else {
+                if (error) error.hidden = false;
+                input?.select();
+              }
+            } catch (err) {
+              if (error) {
+                error.textContent = 'Password check failed in this browser.';
+                error.hidden = false;
+              }
+            } finally {
+              if (button) button.disabled = false;
+            }
+          });
+          return modal;
+        };
+
+        const openThumb3GateModal = () => {
+          const modal = ensureThumb3GateModal();
+          const input = modal.querySelector('#thumb3GateInput');
+          const error = modal.querySelector('#thumb3GateError');
+          if (error) {
+            error.textContent = 'Incorrect password.';
+            error.hidden = true;
+          }
+          if (input) input.value = '';
+          modal.classList.add('open');
+          modal.setAttribute('aria-hidden', 'false');
+          setTimeout(() => input?.focus(), 40);
+        };
+
         const setThumbnailTemplate = value => {
+          if (value === '3' && !thumb3GateAuthorized()) {
+            openThumb3GateModal();
+            return;
+          }
           currentThumbnailTemplate = value === '2' ? '2' : value === '3' ? '3' : '1';
           if (thumbBuilderPageEl) thumbBuilderPageEl.setAttribute('data-thumb-template', currentThumbnailTemplate);
           document.body.classList.toggle('thumb2-template-active', currentThumbnailTemplate === '2');
@@ -4720,7 +4820,11 @@ thumbClearBtn?.addEventListener("click", () => {
           img.src = url;
         };
 
-        thumbTemplate3Btn?.addEventListener('click', () => setThumbnailTemplate('3'));
+        thumbTemplate3Btn?.addEventListener('click', event => {
+          event.preventDefault();
+          event.stopPropagation();
+          setThumbnailTemplate('3');
+        });
 
         const openThumb3AddModal = () => {
           if (!thumb3AddMenu) return;
@@ -4762,6 +4866,11 @@ thumbClearBtn?.addEventListener("click", () => {
         document.addEventListener('keydown', event => {
           if (event.key === 'Escape' && thumb3AddMenu && !thumb3AddMenu.hidden) closeThumb3AddModal();
           if (event.key === 'Escape' && thumb3WeaponPicker?.classList.contains('open')) closeThumb3WeaponPicker();
+          const gateModal = document.getElementById('thumb3GateModal');
+          if (event.key === 'Escape' && gateModal?.classList.contains('open')) {
+            gateModal.classList.remove('open');
+            gateModal.setAttribute('aria-hidden', 'true');
+          }
         });
         thumb3ImageInput?.addEventListener('change', async () => {
           const file = thumb3ImageInput.files?.[0];

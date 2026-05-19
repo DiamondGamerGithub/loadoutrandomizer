@@ -6985,3 +6985,112 @@ body.thumbnail-page.thumb3-template-active .thumb3-template {
 #thumb3WeaponPicker .screen-picker-modal {
   width: min(920px, 96vw);
 }
+
+
+/* v102 Custom Thumbnail password gate */
+.thumb3-gate-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 2147482600;
+  display: none;
+  place-items: center;
+  padding: 18px;
+  background: rgba(2, 5, 15, 0.74);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+}
+
+.thumb3-gate-backdrop.open {
+  display: grid;
+}
+
+.thumb3-gate-modal {
+  position: relative;
+  width: min(460px, calc(100vw - 34px));
+  border-radius: 30px;
+  border: 1px solid rgba(255,255,255,0.14);
+  background:
+    radial-gradient(circle at 18% 0%, rgba(87,215,255,0.18), transparent 38%),
+    radial-gradient(circle at 88% 12%, rgba(255,227,107,0.14), transparent 34%),
+    rgba(9, 13, 28, 0.96);
+  box-shadow: 0 32px 100px rgba(0,0,0,0.58), inset 0 1px 0 rgba(255,255,255,0.11);
+  padding: 28px;
+  color: #fff;
+  text-align: center;
+}
+
+.thumb3-gate-modal h2 {
+  margin: 0 0 10px;
+  color: #fff7cf;
+  font-size: clamp(28px, 4.6vw, 42px);
+  font-weight: 1000;
+  letter-spacing: -0.04em;
+  text-shadow: 0 0 28px rgba(255,227,107,0.18);
+}
+
+.thumb3-gate-modal p {
+  margin: 0 auto 18px;
+  max-width: 360px;
+  color: #aeb9d3;
+  font-size: 14px;
+  line-height: 1.55;
+  font-weight: 800;
+}
+
+.thumb3-gate-form {
+  display: grid;
+  gap: 12px;
+}
+
+.thumb3-gate-form input {
+  width: 100%;
+  border: 1px solid rgba(255,255,255,0.13);
+  border-radius: 16px;
+  background: rgba(5, 9, 20, 0.84);
+  color: #fff;
+  padding: 13px 14px;
+  font: inherit;
+  font-weight: 850;
+  outline: none;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.06);
+}
+
+.thumb3-gate-form input:focus {
+  border-color: rgba(87,215,255,0.55);
+  box-shadow: 0 0 0 4px rgba(87,215,255,0.12), inset 0 1px 0 rgba(255,255,255,0.08);
+}
+
+.thumb3-gate-form button {
+  justify-content: center;
+  min-height: 44px;
+  background: linear-gradient(90deg, #57d7ff, #ffe36b) !important;
+  color: #061017 !important;
+}
+
+.thumb3-gate-error {
+  margin-top: 12px;
+  color: #ff8f8f;
+  font-size: 13px;
+  font-weight: 900;
+}
+
+.thumb3-gate-close {
+  position: absolute;
+  top: 14px;
+  right: 14px;
+  width: 38px;
+  height: 38px;
+  border: 1px solid rgba(255,255,255,0.14);
+  border-radius: 999px;
+  background: rgba(255,255,255,0.07);
+  color: #fff;
+  font-size: 24px;
+  line-height: 1;
+  font-weight: 900;
+  cursor: pointer;
+}
+
+.thumb3-gate-close:hover {
+  filter: brightness(1.15);
+  transform: translateY(-1px);
+}
