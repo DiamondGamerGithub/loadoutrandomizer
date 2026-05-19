@@ -4093,12 +4093,23 @@ thumbClearBtn?.addEventListener("click", () => {
                 </div>
                 <button class="thumb3-add-fab" id="thumb3AddBtn" type="button" aria-label="Add to custom thumbnail">+</button>
                 <div class="thumb3-add-menu" id="thumb3AddMenu" hidden>
-                  <button class="mini-btn" type="button" data-thumb3-add="text">Text</button>
-                  <button class="mini-btn" type="button" data-thumb3-add="image">Image</button>
-                  <button class="mini-btn" type="button" data-thumb3-add="weaponSlot">Weapon Slot</button>
-                  <button class="mini-btn" type="button" data-thumb3-add="squareSlot">Square Weapon Slot</button>
-                  <button class="mini-btn" type="button" data-thumb3-add="weapon">Weapon</button>
-                  <button class="mini-btn" type="button" data-thumb3-add="background">New Background</button>
+                  <div class="thumb3-add-modal-card">
+                    <div class="thumb3-add-modal-head">
+                      <div>
+                        <h3>Add Element</h3>
+                        <p>Choose what you want to add to your custom thumbnail.</p>
+                      </div>
+                      <button class="thumb3-add-close" type="button" data-thumb3-add-close aria-label="Close add menu">×</button>
+                    </div>
+                    <div class="thumb3-add-modal-grid">
+                      <button class="mini-btn" type="button" data-thumb3-add="text">Text</button>
+                      <button class="mini-btn" type="button" data-thumb3-add="image">Image</button>
+                      <button class="mini-btn" type="button" data-thumb3-add="weaponSlot">Weapon Slot</button>
+                      <button class="mini-btn" type="button" data-thumb3-add="squareSlot">Square Weapon Slot</button>
+                      <button class="mini-btn" type="button" data-thumb3-add="weapon">Weapon</button>
+                      <button class="mini-btn" type="button" data-thumb3-add="background">New Background</button>
+                    </div>
+                  </div>
                 </div>
               </div>
             </div>
@@ -4486,20 +4497,41 @@ thumbClearBtn?.addEventListener("click", () => {
         };
 
         thumbTemplate3Btn?.addEventListener('click', () => setThumbnailTemplate('3'));
-        thumb3AddBtn?.addEventListener('click', () => {
-          thumb3AddMenu.hidden = !thumb3AddMenu.hidden;
+
+        const openThumb3AddModal = () => {
+          if (!thumb3AddMenu) return;
+          thumb3AddMenu.hidden = false;
+          thumb3AddMenu.classList.add('open');
+        };
+
+        const closeThumb3AddModal = () => {
+          if (!thumb3AddMenu) return;
+          thumb3AddMenu.classList.remove('open');
+          thumb3AddMenu.hidden = true;
+        };
+
+        thumb3AddBtn?.addEventListener('click', event => {
+          event.preventDefault();
+          event.stopPropagation();
+          openThumb3AddModal();
         });
+
         thumb3AddMenu?.addEventListener('click', event => {
+          if (event.target === thumb3AddMenu || event.target.closest('[data-thumb3-add-close]')) {
+            closeThumb3AddModal();
+            return;
+          }
+
           const btn = event.target.closest('[data-thumb3-add]');
           if (!btn) return;
-          thumb3AddMenu.hidden = true;
+          event.preventDefault();
+          event.stopPropagation();
+          closeThumb3AddModal();
           thumb3AddByType(btn.dataset.thumb3Add);
         });
-        document.addEventListener('click', event => {
-          if (!thumb3Template.contains(event.target)) return;
-        });
-        document.addEventListener('pointerdown', event => {
-          if (!thumb3Template.contains(event.target) && !thumb3AddMenu.hidden) thumb3AddMenu.hidden = true;
+
+        document.addEventListener('keydown', event => {
+          if (event.key === 'Escape' && thumb3AddMenu && !thumb3AddMenu.hidden) closeThumb3AddModal();
         });
         thumb3ImageInput?.addEventListener('change', async () => {
           const file = thumb3ImageInput.files?.[0];
