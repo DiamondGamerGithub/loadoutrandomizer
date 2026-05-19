@@ -3514,7 +3514,10 @@ thumbClearBtn?.addEventListener("click", () => {
           if (thumbBuilderPageEl) thumbBuilderPageEl.setAttribute('data-thumb-template', currentThumbnailTemplate);
           document.body.classList.toggle('thumb2-template-active', currentThumbnailTemplate === '2');
           thumbTemplateTabs.forEach(btn => btn.classList.toggle('active', btn.dataset.thumbTemplate === currentThumbnailTemplate));
-          setTimeout(updateThumb2LayoutScale, 40);
+          setTimeout(() => {
+            updateThumb2LayoutScale();
+            if (currentThumbnailTemplate === '2') updateThumb2Preview();
+          }, 60);
         };
 
         const updateThumb2LayoutScale = () => {
@@ -3542,15 +3545,23 @@ thumbClearBtn?.addEventListener("click", () => {
         };
 
         const updateThumb2Preview = () => {
-          if (currentThumbnailTemplate !== '2' || !thumb2Stage || !thumb2Canvas) return;
+          const isTemplate2 = currentThumbnailTemplate === '2' || thumbBuilderPageEl?.dataset.thumbTemplate === '2' || document.body.classList.contains('thumb2-template-active');
+          if (!isTemplate2 || !thumb2Stage || !thumb2Canvas) return;
+
+          applyThumb2Global();
           updateThumb2LayoutScale();
+
           const preview = ensureThumb2Preview();
-          const sourceRect = thumb2Stage.getBoundingClientRect();
-          const sourceW = Math.max(sourceRect.width || 1120, 320);
-          const sourceH = Math.max(sourceRect.height || sourceW * 9 / 16, 180);
+          const sourceW = 1280;
+          const sourceH = 720;
           const clone = thumb2Stage.cloneNode(true);
           clone.removeAttribute('id');
           clone.querySelectorAll('[id]').forEach(node => node.removeAttribute('id'));
+          clone.classList.add('thumb2-preview-clone');
+          clone.style.width = `${sourceW}px`;
+          clone.style.height = `${sourceH}px`;
+          clone.style.aspectRatio = 'auto';
+          clone.style.setProperty('--thumb2-render-scale', '1');
 
           const wrap = document.createElement('div');
           wrap.className = 'thumb2-preview-scale';
@@ -3562,12 +3573,14 @@ thumbClearBtn?.addEventListener("click", () => {
           preview.appendChild(wrap);
           preview.classList.add('show');
 
-          const previewRect = preview.getBoundingClientRect();
-          const scale = Math.min(previewRect.width / sourceW, previewRect.height / sourceH);
-          wrap.style.setProperty('--thumb2-preview-scale', String(scale));
+          requestAnimationFrame(() => {
+            const previewRect = preview.getBoundingClientRect();
+            const scale = Math.max(0.01, Math.min(previewRect.width / sourceW, previewRect.height / sourceH));
+            wrap.style.setProperty('--thumb2-preview-scale', String(scale));
+          });
 
           clearTimeout(thumb2PreviewTimer);
-          thumb2PreviewTimer = setTimeout(() => preview.classList.remove('show'), 1700);
+          thumb2PreviewTimer = setTimeout(() => preview.classList.remove('show'), 2200);
         };
 
         const getThumb2DisplayName = weapon => weapon ? (weapon.labelName || weapon.baseWeapon || weapon.name) : '';
@@ -5166,6 +5179,8 @@ thumbClearBtn?.addEventListener("click", () => {
 
         let activeFusionSlot = 0;
         let fusionSelections = [null, null];
+        const customFusionRecipes = new Map();
+        let editingCustomFusionKey = null;
 
         const getWeapon = name => allWeapons.find(w => w.name === name);
         const keyFor = (a, b) => [a, b].map(v => String(v || "").toLowerCase()).sort().join(" + ");
@@ -5300,6 +5315,176 @@ thumbClearBtn?.addEventListener("click", () => {
           }
         };
 
+
+        const ensureFusionAdvancedUi = () => {
+          if (document.getElementById("fusionAdvancedOpenBtn")) return;
+
+          const openBtn = document.createElement("button");
+          openBtn.id = "fusionAdvancedOpenBtn";
+          openBtn.type = "button";
+          openBtn.className = "tier-add-btn secondary fusion-advanced-open";
+          openBtn.textContent = "Advanced Settings";
+          page.appendChild(openBtn);
+
+          const modal = document.createElement("div");
+          modal.id = "fusionAdvancedModal";
+          modal.className = "fusion-advanced-backdrop";
+          modal.setAttribute("aria-hidden", "true");
+          modal.innerHTML = `
+            <div class="fusion-advanced-modal" role="dialog" aria-modal="true" aria-labelledby="fusionAdvancedTitle">
+              <div class="fusion-advanced-head">
+                <div>
+                  <h2 id="fusionAdvancedTitle">Advanced Fusion Settings</h2>
+                  <p>Create custom fusions for this session. These reset when the page refreshes.</p>
+                </div>
+                <button class="fusion-advanced-close" type="button" aria-label="Close advanced settings">×</button>
+              </div>
+
+              <div class="fusion-advanced-form">
+                <label>
+                  <span>Weapon 1</span>
+                  <select id="fusionAdvancedWeaponA"></select>
+                </label>
+                <label>
+                  <span>Weapon 2</span>
+                  <select id="fusionAdvancedWeaponB"></select>
+                </label>
+                <label>
+                  <span>Fusion Result</span>
+                  <select id="fusionAdvancedResult"></select>
+                </label>
+              </div>
+
+              <div class="fusion-advanced-actions">
+                <button class="tier-add-btn fusion-button" id="fusionAdvancedCreate" type="button">Create Custom Fusion</button>
+                <button class="tier-add-btn secondary" id="fusionAdvancedResetForm" type="button">Reset Form</button>
+              </div>
+
+              <div class="fusion-custom-list-head">
+                <strong>Custom Fusions</strong>
+                <span id="fusionCustomCount">0 created</span>
+              </div>
+              <div class="fusion-custom-list" id="fusionCustomList">
+                <div class="fusion-custom-empty">No custom fusions yet.</div>
+              </div>
+            </div>
+          `;
+          document.body.appendChild(modal);
+
+          const closeBtn = modal.querySelector(".fusion-advanced-close");
+          const weaponA = modal.querySelector("#fusionAdvancedWeaponA");
+          const weaponB = modal.querySelector("#fusionAdvancedWeaponB");
+          const result = modal.querySelector("#fusionAdvancedResult");
+          const createBtn = modal.querySelector("#fusionAdvancedCreate");
+          const resetBtn = modal.querySelector("#fusionAdvancedResetForm");
+          const list = modal.querySelector("#fusionCustomList");
+          const count = modal.querySelector("#fusionCustomCount");
+
+          const options = allWeapons.map(w => `<option value="${escapeHtml(w.name)}">${escapeHtml(w.name)} (${escapeHtml(w.category || "Weapon")})</option>`).join("");
+          [weaponA, weaponB, result].forEach(select => {
+            select.innerHTML = options;
+          });
+
+          const resetForm = () => {
+            editingCustomFusionKey = null;
+            weaponA.value = allWeapons[0]?.name || "";
+            weaponB.value = allWeapons[1]?.name || allWeapons[0]?.name || "";
+            result.value = allWeapons[2]?.name || allWeapons[0]?.name || "";
+            createBtn.textContent = "Create Custom Fusion";
+          };
+
+          const renderCustomFusionList = () => {
+            const entries = Array.from(customFusionRecipes.entries());
+            count.textContent = `${entries.length} created`;
+            if (!entries.length) {
+              list.innerHTML = `<div class="fusion-custom-empty">No custom fusions yet.</div>`;
+              return;
+            }
+            list.innerHTML = entries.map(([key, value]) => `
+              <div class="fusion-custom-row" data-fusion-custom-key="${escapeHtml(key)}">
+                <span>${escapeHtml(value.a)} + ${escapeHtml(value.b)} <strong>→ ${escapeHtml(value.result)}</strong></span>
+                <div class="fusion-custom-row-actions">
+                  <button type="button" data-fusion-edit="${escapeHtml(key)}" aria-label="Edit custom fusion">✏️</button>
+                  <button type="button" data-fusion-remove="${escapeHtml(key)}" aria-label="Remove custom fusion">♻️</button>
+                </div>
+              </div>
+            `).join("");
+          };
+
+          const openModal = () => {
+            modal.classList.add("open");
+            modal.setAttribute("aria-hidden", "false");
+            renderCustomFusionList();
+          };
+
+          const closeModal = () => {
+            modal.classList.remove("open");
+            modal.setAttribute("aria-hidden", "true");
+          };
+
+          openBtn.addEventListener("click", openModal);
+          closeBtn.addEventListener("click", closeModal);
+          modal.addEventListener("click", event => {
+            if (event.target === modal) closeModal();
+          });
+
+          createBtn.addEventListener("click", () => {
+            const a = weaponA.value;
+            const b = weaponB.value;
+            const fusionResult = result.value;
+            if (!a || !b || !fusionResult || a === b) return;
+
+            if (editingCustomFusionKey && editingCustomFusionKey !== keyFor(a, b)) {
+              customFusionRecipes.delete(editingCustomFusionKey);
+            }
+
+            customFusionRecipes.set(keyFor(a, b), {
+              a,
+              b,
+              result: fusionResult,
+              reason: "custom advanced fusion"
+            });
+
+            editingCustomFusionKey = null;
+            createBtn.textContent = "Create Custom Fusion";
+            renderCustomFusionList();
+
+            const currentKey = fusionSelections[0] && fusionSelections[1] ? keyFor(fusionSelections[0].name, fusionSelections[1].name) : "";
+            if (currentKey && customFusionRecipes.has(currentKey)) renderResult(true);
+          });
+
+          resetBtn.addEventListener("click", resetForm);
+
+          list.addEventListener("click", event => {
+            const editBtn = event.target.closest("[data-fusion-edit]");
+            const removeBtn = event.target.closest("[data-fusion-remove]");
+
+            if (editBtn) {
+              const key = editBtn.dataset.fusionEdit;
+              const entry = customFusionRecipes.get(key);
+              if (!entry) return;
+              editingCustomFusionKey = key;
+              weaponA.value = entry.a;
+              weaponB.value = entry.b;
+              result.value = entry.result;
+              createBtn.textContent = "Save Custom Fusion";
+              return;
+            }
+
+            if (removeBtn) {
+              const key = removeBtn.dataset.fusionRemove;
+              customFusionRecipes.delete(key);
+              if (editingCustomFusionKey === key) resetForm();
+              renderCustomFusionList();
+              const currentKey = fusionSelections[0] && fusionSelections[1] ? keyFor(fusionSelections[0].name, fusionSelections[1].name) : "";
+              if (currentKey === key) renderResult(true);
+            }
+          });
+
+          resetForm();
+        };
+
+
         const setFusionImage = (img, weapon) => {
           if (!img || !weapon) return;
           img.onerror = null;
@@ -5330,6 +5515,9 @@ thumbClearBtn?.addEventListener("click", () => {
         const pickFusionResult = () => {
           const [a, b] = fusionSelections;
           if (!a || !b) return null;
+
+          const custom = customFusionRecipes.get(keyFor(a.name, b.name));
+          if (custom && getWeapon(custom.result)) return custom;
 
           const direct = fusionRecipes.get(keyFor(a.name, b.name));
           if (direct && getWeapon(direct.result)) return direct;
@@ -5426,6 +5614,7 @@ thumbClearBtn?.addEventListener("click", () => {
           renderFusionSlot(1);
           renderResult(false);
         });
+        ensureFusionAdvancedUi();
         renderFusionSlot(0);
         renderFusionSlot(1);
         renderResult(false);
