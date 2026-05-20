@@ -7241,3 +7241,17 @@ body[data-randomizer-odds="super"] .spin-btn {
     min-height: 104px;
   }
 }
+
+
+
+/* v104 Advanced Settings moved to mini-actions */
+.mini-actions .randomizer-advanced-btn {
+  margin-left: 0;
+}
+
+.mini-actions .randomizer-advanced-btn.active {
+  color: #061017 !important;
+  border-color: rgba(255, 227, 107, 0.48) !important;
+  background: linear-gradient(90deg, #57d7ff, #ffe36b) !important;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.42), 0 12px 28px rgba(87,215,255,0.16);
+}

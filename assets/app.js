@@ -83,11 +83,11 @@ const embeddedImages = {"Distortion":__rtAsset("Weapons/Distortion_Icon.webp"),"
     const weaponList = document.getElementById("weaponList");
 
     const randomizerAdvancedBtn = document.createElement("button");
-    randomizerAdvancedBtn.className = "mode-btn randomizer-advanced-btn";
+    randomizerAdvancedBtn.className = "mini-btn randomizer-advanced-btn";
     randomizerAdvancedBtn.id = "randomizerAdvancedBtn";
     randomizerAdvancedBtn.type = "button";
     randomizerAdvancedBtn.textContent = "Advanced Settings";
-    resetRepeatsBtn?.after(randomizerAdvancedBtn);
+    (document.getElementById("copyLoadout") || resetRepeatsBtn)?.after(randomizerAdvancedBtn);
 
     const randomizerAdvancedModal = document.createElement("div");
     randomizerAdvancedModal.className = "randomizer-advanced-backdrop";
@@ -554,16 +554,81 @@ const embeddedImages = {"Distortion":__rtAsset("Weapons/Distortion_Icon.webp"),"
       return weighted[weighted.length - 1].item;
     }
 
-    function advancedOddsPick(pool) {
+    function pickVariedFromBottom(pool) {
+      if (!pool.length) return null;
+      const sorted = pool.slice().sort((a, b) => a.power - b.power);
+      const lowestPower = sorted[0]?.power ?? 0;
+      const weakBand = sorted.filter(item =>
+        item.tier === "Common" &&
+        item.power <= Math.min(3.0, lowestPower + 1.15)
+      );
+      const candidates = (weakBand.length ? weakBand : sorted.filter(item => item.power <= 3.0 && !["Epic", "Legendary", "Unobtainable"].includes(item.tier))).slice(0, 7);
+      const fallback = candidates.length ? candidates : sorted.filter(item => !["Epic", "Legendary", "Unobtainable"].includes(item.tier)).slice(0, 5);
+      const finalPool = fallback.length ? fallback : sorted.slice(0, 4);
+      const weighted = finalPool.map((item, index) => ({
+        item,
+        weight: Math.max(0.25, (finalPool.length - index) ** 1.35)
+      }));
+      const total = weighted.reduce((sum, entry) => sum + entry.weight, 0);
+      let roll = Math.random() * total;
+      for (const entry of weighted) {
+        roll -= entry.weight;
+        if (roll <= 0) return entry.item;
+      }
+      return weighted[weighted.length - 1]?.item || null;
+    }
+
+    function pickVariedFromTop(pool) {
+      if (!pool.length) return null;
+      const sorted = pool.slice().sort((a, b) => b.power - a.power);
+      const bestPower = sorted[0]?.power ?? 0;
+      const topBand = sorted.filter(item =>
+        item.power >= bestPower - 0.45 &&
+        !["Unobtainable"].includes(item.tier)
+      );
+      const finalPool = (topBand.length ? topBand : sorted).slice(0, 5);
+      const weighted = finalPool.map((item, index) => ({
+        item,
+        weight: Math.max(0.35, (finalPool.length - index) ** 1.55)
+      }));
+      const total = weighted.reduce((sum, entry) => sum + entry.weight, 0);
+      let roll = Math.random() * total;
+      for (const entry of weighted) {
+        roll -= entry.weight;
+        if (roll <= 0) return entry.item;
+      }
+      return weighted[weighted.length - 1]?.item || null;
+    }
+
+    function advancedOddsPick(pool, extraTaken = new Set(), categoryCounts = {}) {
       if (!pool.length) return null;
       if (advancedOddsMode === "normal") return weightedPick(pool);
-      const sorted = pool.slice().sort((a, b) => {
-        const powerCompare = advancedOddsMode === "horrible" ? a.power - b.power : b.power - a.power;
-        if (powerCompare !== 0) return powerCompare;
-        const tierCompare = rarityOrder.indexOf(a.tier) - rarityOrder.indexOf(b.tier);
-        return advancedOddsMode === "horrible" ? tierCompare : -tierCompare;
-      });
-      return sorted[0] || null;
+
+      let filtered = pool.filter(item => !extraTaken.has(item.name));
+
+      if (advancedOddsMode === "horrible") {
+        filtered = filtered.filter(item =>
+          !["Epic", "Legendary", "Unobtainable"].includes(item.tier) &&
+          item.power <= 3.05
+        );
+      } else {
+        filtered = filtered.filter(item => item.tier !== "Unobtainable");
+      }
+
+      if ((categoryCounts.Melee || 0) >= 2) {
+        filtered = filtered.filter(item => item.category !== "Melee");
+      }
+
+      if (!filtered.length) {
+        filtered = pool.filter(item => !extraTaken.has(item.name));
+        if ((categoryCounts.Melee || 0) >= 2) filtered = filtered.filter(item => item.category !== "Melee");
+      }
+
+      if (!filtered.length) filtered = pool.slice();
+
+      return advancedOddsMode === "horrible"
+        ? pickVariedFromBottom(filtered)
+        : pickVariedFromTop(filtered);
     }
 
     function advancedOddsLabel() {
@@ -587,7 +652,7 @@ const embeddedImages = {"Distortion":__rtAsset("Weapons/Distortion_Icon.webp"),"
     function setAdvancedOddsMode(mode) {
       advancedOddsMode = mode === "horrible" ? "horrible" : mode === "super" ? "super" : "normal";
       updateAdvancedOddsUi();
-      if (advancedOddsMode === "horrible") statusText.textContent = "HORRIBLE ODDS ENABLED";
+      if (advancedOddsMode === "horrible") statusText.textContent = "HORRIBLE ODDS ENABLED — WEAK ITEMS ONLY";
       else if (advancedOddsMode === "super") statusText.textContent = "SUPER LUCKY ODDS ENABLED";
       else statusText.textContent = "NORMAL ODDS ENABLED";
       if (rngMode) renderRngDice(currentRngResult || 1, false, getRngRollCount());
@@ -614,11 +679,15 @@ const embeddedImages = {"Distortion":__rtAsset("Weapons/Distortion_Icon.webp"),"
       const spinDurations = [650, 1510, 2580, 3860];
       const finalPicks = {};
       const currentSpinTaken = new Set();
+      const currentCategoryCounts = {};
       slots.forEach(slot => {
         const pool = poolForSlot(slot, currentSpinTaken);
-        const pick = pool.length ? advancedOddsPick(pool) : unavailableWeapon(emptyPoolLabel(slot));
+        const pick = pool.length ? advancedOddsPick(pool, currentSpinTaken, currentCategoryCounts) : unavailableWeapon(emptyPoolLabel(slot));
         finalPicks[slot] = pick;
-        if (noRepeatsMode && pick && pick.power > 0) currentSpinTaken.add(pick.name);
+        if (pick && pick.power > 0) {
+          currentSpinTaken.add(pick.name);
+          currentCategoryCounts[pick.category] = (currentCategoryCounts[pick.category] || 0) + 1;
+        }
       });
 
       document.querySelectorAll(".slot").forEach(slotEl => slotEl.classList.remove("lucky"));
