@@ -56,6 +56,7 @@ const embeddedImages = {"Distortion":__rtAsset("Weapons/Distortion_Icon.webp"),"
     let noRepeatsMode = false;
     let rngMode = false;
     let disableRareAnimations = false;
+    let advancedOddsMode = "normal";
     let currentRngResult = null;
     const repeatedWeapons = new Set();
     const disabledWeapons = new Set(autoDisabledWeaponNames);
@@ -80,6 +81,43 @@ const embeddedImages = {"Distortion":__rtAsset("Weapons/Distortion_Icon.webp"),"
     const cancelCustomLuck = document.getElementById("cancelCustomLuck");
     const weaponDrawer = document.getElementById("weaponDrawer");
     const weaponList = document.getElementById("weaponList");
+
+    const randomizerAdvancedBtn = document.createElement("button");
+    randomizerAdvancedBtn.className = "mode-btn randomizer-advanced-btn";
+    randomizerAdvancedBtn.id = "randomizerAdvancedBtn";
+    randomizerAdvancedBtn.type = "button";
+    randomizerAdvancedBtn.textContent = "Advanced Settings";
+    resetRepeatsBtn?.after(randomizerAdvancedBtn);
+
+    const randomizerAdvancedModal = document.createElement("div");
+    randomizerAdvancedModal.className = "randomizer-advanced-backdrop";
+    randomizerAdvancedModal.id = "randomizerAdvancedModal";
+    randomizerAdvancedModal.setAttribute("aria-hidden", "true");
+    randomizerAdvancedModal.innerHTML = `
+      <div class="randomizer-advanced-modal" role="dialog" aria-modal="true" aria-labelledby="randomizerAdvancedTitle">
+        <div class="randomizer-advanced-head">
+          <div>
+            <h2 id="randomizerAdvancedTitle">Advanced Settings</h2>
+            <p>Super secret settings for your videos.</p>
+          </div>
+          <button class="randomizer-advanced-close" type="button" aria-label="Close advanced settings">×</button>
+        </div>
+        <div class="randomizer-odds-grid" role="group" aria-label="Advanced odds mode">
+          <button class="randomizer-odds-btn" type="button" data-advanced-odds="horrible">
+            <strong>Horrible Odds</strong>
+            <span>Only gives the worst enabled items possible.</span>
+          </button>
+          <button class="randomizer-odds-btn active" type="button" data-advanced-odds="normal">
+            <strong>Normal Odds</strong>
+            <span>Uses the normal luck buttons and rarity settings.</span>
+          </button>
+          <button class="randomizer-odds-btn super" type="button" data-advanced-odds="super">
+            <strong>Super Lucky Odds</strong>
+            <span>Targets the best enabled items instead of just boosting luck.</span>
+          </button>
+        </div>
+      </div>`;
+    document.body.appendChild(randomizerAdvancedModal);
 
     function rarityTier(power) {
       if (power >= 4.55) return "Legendary";
@@ -516,6 +554,46 @@ const embeddedImages = {"Distortion":__rtAsset("Weapons/Distortion_Icon.webp"),"
       return weighted[weighted.length - 1].item;
     }
 
+    function advancedOddsPick(pool) {
+      if (!pool.length) return null;
+      if (advancedOddsMode === "normal") return weightedPick(pool);
+      const sorted = pool.slice().sort((a, b) => {
+        const powerCompare = advancedOddsMode === "horrible" ? a.power - b.power : b.power - a.power;
+        if (powerCompare !== 0) return powerCompare;
+        const tierCompare = rarityOrder.indexOf(a.tier) - rarityOrder.indexOf(b.tier);
+        return advancedOddsMode === "horrible" ? tierCompare : -tierCompare;
+      });
+      return sorted[0] || null;
+    }
+
+    function advancedOddsLabel() {
+      if (advancedOddsMode === "horrible") return "Horrible Odds";
+      if (advancedOddsMode === "super") return "Super Lucky Odds";
+      return "Normal Odds";
+    }
+
+    function updateAdvancedOddsUi() {
+      const isSpecial = advancedOddsMode !== "normal";
+      document.body.setAttribute("data-randomizer-odds", advancedOddsMode);
+      if (luckRow) luckRow.hidden = isSpecial;
+      randomizerAdvancedBtn?.classList.toggle("active", isSpecial);
+      randomizerAdvancedBtn?.setAttribute("aria-pressed", String(isSpecial));
+      randomizerAdvancedBtn.textContent = isSpecial ? `Advanced: ${advancedOddsLabel()}` : "Advanced Settings";
+      randomizerAdvancedModal?.querySelectorAll("[data-advanced-odds]").forEach(btn => {
+        btn.classList.toggle("active", btn.dataset.advancedOdds === advancedOddsMode);
+      });
+    }
+
+    function setAdvancedOddsMode(mode) {
+      advancedOddsMode = mode === "horrible" ? "horrible" : mode === "super" ? "super" : "normal";
+      updateAdvancedOddsUi();
+      if (advancedOddsMode === "horrible") statusText.textContent = "HORRIBLE ODDS ENABLED";
+      else if (advancedOddsMode === "super") statusText.textContent = "SUPER LUCKY ODDS ENABLED";
+      else statusText.textContent = "NORMAL ODDS ENABLED";
+      if (rngMode) renderRngDice(currentRngResult || 1, false, getRngRollCount());
+      else renderSlots();
+    }
+
     function poolForSlot(slot, extraTaken = new Set()) {
       const basePool = completelyRandom ? allWeapons : weaponsBySlot[slot];
       return repeatFilteredPool(rarityFilteredPool(enabledPool(basePool)), extraTaken);
@@ -538,7 +616,7 @@ const embeddedImages = {"Distortion":__rtAsset("Weapons/Distortion_Icon.webp"),"
       const currentSpinTaken = new Set();
       slots.forEach(slot => {
         const pool = poolForSlot(slot, currentSpinTaken);
-        const pick = pool.length ? weightedPick(pool) : unavailableWeapon(emptyPoolLabel(slot));
+        const pick = pool.length ? advancedOddsPick(pool) : unavailableWeapon(emptyPoolLabel(slot));
         finalPicks[slot] = pick;
         if (noRepeatsMode && pick && pick.power > 0) currentSpinTaken.add(pick.name);
       });
@@ -551,7 +629,8 @@ const embeddedImages = {"Distortion":__rtAsset("Weapons/Distortion_Icon.webp"),"
       noRepeatsBtn.disabled = true;
       rngModeBtn.disabled = true;
       resetRepeatsBtn.disabled = true;
-      statusText.textContent = noRepeatsMode ? "NO REPEATS ROLL..." : (completelyRandom ? "FULL RANDOM..." : "ROLLING...");
+      randomizerAdvancedBtn.disabled = true;
+      statusText.textContent = advancedOddsMode === "horrible" ? "HORRIBLE ROLL..." : advancedOddsMode === "super" ? "SUPER LUCKY ROLL..." : (noRepeatsMode ? "NO REPEATS ROLL..." : (completelyRandom ? "FULL RANDOM..." : "ROLLING..."));
       startSpinSound();
 
       const intervals = {};
@@ -598,6 +677,7 @@ const embeddedImages = {"Distortion":__rtAsset("Weapons/Distortion_Icon.webp"),"
       noRepeatsBtn.disabled = false;
       rngModeBtn.disabled = false;
       resetRepeatsBtn.disabled = false;
+      randomizerAdvancedBtn.disabled = false;
       isSpinning = false;
     }
 
@@ -613,6 +693,7 @@ const embeddedImages = {"Distortion":__rtAsset("Weapons/Distortion_Icon.webp"),"
       noRepeatsBtn.disabled = true;
       rngModeBtn.disabled = true;
       resetRepeatsBtn.disabled = true;
+      randomizerAdvancedBtn.disabled = true;
       rarityRow.hidden = true;
       statusText.textContent = `ROLLING ${rollCount.toLocaleString()} ROLL${rollCount === 1 ? "" : "S"}...`;
       renderRngDice(randomItem([1, 2, 3, 4, 5, 6]), true, rollCount);
@@ -650,6 +731,7 @@ const embeddedImages = {"Distortion":__rtAsset("Weapons/Distortion_Icon.webp"),"
       noRepeatsBtn.disabled = false;
       rngModeBtn.disabled = false;
       resetRepeatsBtn.disabled = false;
+      randomizerAdvancedBtn.disabled = false;
       resetRepeatsBtn.hidden = !noRepeatsMode || rngMode;
       isSpinning = false;
     }
@@ -751,11 +833,12 @@ function setRngMode(value) {
       rarityRow.hidden = rngMode;
       spinBtn.textContent = rngMode ? "Spin Rolls" : "Spin Loadout";
       resetRepeatsBtn.hidden = !noRepeatsMode || rngMode;
+      updateAdvancedOddsUi();
       if (rngMode) {
         statusText.textContent = "RNG SPINS READY";
         renderRngDice(currentRngResult || 1, false, getRngRollCount());
       } else {
-        statusText.textContent = "LOADOUT READY";
+        statusText.textContent = advancedOddsMode === "normal" ? "LOADOUT READY" : `${advancedOddsLabel().toUpperCase()} READY`;
         renderSlots();
       }
     }
@@ -885,6 +968,25 @@ function setRngMode(value) {
       resetRepeats();
     });
 
+    randomizerAdvancedBtn?.addEventListener("click", () => {
+      if (isSpinning) return;
+      randomizerAdvancedModal.classList.add("open");
+      randomizerAdvancedModal.setAttribute("aria-hidden", "false");
+    });
+
+    randomizerAdvancedModal?.addEventListener("click", event => {
+      if (event.target === randomizerAdvancedModal || event.target.closest(".randomizer-advanced-close")) {
+        randomizerAdvancedModal.classList.remove("open");
+        randomizerAdvancedModal.setAttribute("aria-hidden", "true");
+        return;
+      }
+      const oddsBtn = event.target.closest("[data-advanced-odds]");
+      if (!oddsBtn) return;
+      setAdvancedOddsMode(oddsBtn.dataset.advancedOdds);
+      randomizerAdvancedModal.classList.remove("open");
+      randomizerAdvancedModal.setAttribute("aria-hidden", "true");
+    });
+
     spinBtn.addEventListener("click", () => rngMode ? spinRngRolls() : spinLoadout());
     weaponList.addEventListener("click", event => {
       const btn = event.target.closest(".weapon-toggle");
@@ -899,17 +1001,23 @@ function setRngMode(value) {
     document.getElementById("copyLoadout").addEventListener("click", copyCurrentLoadout);
 
     window.addEventListener("keydown", event => {
+      if (event.key === "Escape" && randomizerAdvancedModal.classList.contains("open")) {
+        randomizerAdvancedModal.classList.remove("open");
+        randomizerAdvancedModal.setAttribute("aria-hidden", "true");
+        return;
+      }
       if (event.key === "Escape" && customLuckModal.classList.contains("open")) {
         closeCustomLuckModal();
         return;
       }
-      if (event.code === "Space" && !["INPUT", "TEXTAREA"].includes(document.activeElement.tagName) && !customLuckModal.classList.contains("open")) {
+      if (event.code === "Space" && !["INPUT", "TEXTAREA"].includes(document.activeElement.tagName) && !customLuckModal.classList.contains("open") && !randomizerAdvancedModal.classList.contains("open")) {
         event.preventDefault();
         rngMode ? spinRngRolls() : spinLoadout();
       }
     });
 
     setDisableRareAnimations(false);
+    updateAdvancedOddsUi();
     renderSlots();
     renderWeaponList();
 
